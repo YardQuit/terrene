@@ -426,8 +426,8 @@ sed -i '/PAM-1.0/a\auth       required     pam_yubico.so mode=challenge-response
 ## symlink replaces the symlink with a regular file, so resolve it first - the
 ## same trap as firewalld.conf above.
 ##
-# OS_RELEASE="$(readlink -f /etc/os-release)"
-# cp "${OS_RELEASE}" "${OS_RELEASE}.bak"
+OS_RELEASE="$(readlink -f /etc/os-release)"
+cp "${OS_RELEASE}" "${OS_RELEASE}.bak"
 ##
 ## Substitute a key if the base defines it, append it if not: VARIANT usually
 ## exists but IMAGE_ID does not, and a plain "sed -i" would silently do nothing
