@@ -405,7 +405,7 @@ systemctl mask systemd-remount-fs.service
 ## The example below follows the convention each field already uses:
 ##   VARIANT / VARIANT_ID   the edition on top of the distribution, so
 ##                          "COSMIC Atomic" / cosmic-atomic becomes
-##                          "MYIMAGE Atomic" / myimage-atomic
+##                          "TERRENE Atomic" / terrene-atomic
 ##   VERSION / PRETTY_NAME  carry that same label while keeping the base's build
 ##                          number, so the version follows the base forward on
 ##                          its own rather than being hardcoded here
@@ -448,16 +448,16 @@ systemctl mask systemd-remount-fs.service
 # OS_BUILD="$(. "${OS_RELEASE}"; printf '%s' "${VERSION%% *}")"
 # [ -n "${OS_BUILD}" ] || OS_BUILD="$(. "${OS_RELEASE}"; printf '%s' "${VERSION_ID}")"
 ##
-# os_release_set VARIANT           "\"MYIMAGE Atomic\""
-# os_release_set VARIANT_ID        "myimage-atomic"
-# os_release_set VERSION           "\"${OS_BUILD} (MYIMAGE Atomic)\""
-# os_release_set PRETTY_NAME       "\"${OS_NAME} ${OS_BUILD} (MYIMAGE Atomic)\""
-# os_release_set DEFAULT_HOSTNAME  "\"myimage\""
-# os_release_set HOME_URL          "\"https://github.com/myorg/myimage\""
-# os_release_set DOCUMENTATION_URL "\"https://github.com/myorg/myimage\""
-# os_release_set SUPPORT_URL       "\"https://github.com/myorg/myimage/issues\""
-# os_release_set BUG_REPORT_URL    "\"https://github.com/myorg/myimage/issues\""
-# os_release_set IMAGE_ID          "myimage"
+# os_release_set VARIANT           "\"TERRENE Atomic\""
+# os_release_set VARIANT_ID        "terrene-atomic"
+# os_release_set VERSION           "\"${OS_BUILD} (TERRENE Atomic)\""
+# os_release_set PRETTY_NAME       "\"${OS_NAME} ${OS_BUILD} (TERRENE Atomic)\""
+# os_release_set DEFAULT_HOSTNAME  "\"terrene\""
+# os_release_set HOME_URL          "\"https://github.com/yardquit/terrene\""
+# os_release_set DOCUMENTATION_URL "\"https://github.com/yardquit/terrene\""
+# os_release_set SUPPORT_URL       "\"https://github.com/yardquit/terrene/issues\""
+# os_release_set BUG_REPORT_URL    "\"https://github.com/yardquit/terrene/issues\""
+# os_release_set IMAGE_ID          "terrene"
 # os_release_set IMAGE_VERSION     "\"${OS_BUILD}\""
 ##
 ## On a Fedora base, abrt uses these to file crashes against Fedora's Bugzilla.
@@ -473,10 +473,10 @@ systemctl mask systemd-remount-fs.service
 ## matched nothing is the failure mode this whole section is built to avoid.
 ##
 # ( . "${OS_RELEASE}"
-#   [ "${VARIANT_ID:-}" = "myimage-atomic" ] || { echo "os-release: VARIANT_ID not applied" >&2; exit 1; }
-#   [ "${IMAGE_ID:-}" = "myimage" ]          || { echo "os-release: IMAGE_ID not applied" >&2; exit 1; }
+#   [ "${VARIANT_ID:-}" = "terrene-atomic" ] || { echo "os-release: VARIANT_ID not applied" >&2; exit 1; }
+#   [ "${IMAGE_ID:-}" = "terrene" ]          || { echo "os-release: IMAGE_ID not applied" >&2; exit 1; }
 #   case "${PRETTY_NAME:-}" in
-#       *"MYIMAGE Atomic"*) ;;
+#       *"TERRENE Atomic"*) ;;
 #       *) echo "os-release: PRETTY_NAME not applied" >&2; exit 1 ;;
 #   esac )
 ##

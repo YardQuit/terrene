@@ -39,7 +39,7 @@ env:
   # The published image name: ghcr.io/<owner>/<IMAGE_NAME>
   # Change it with ./scripts/set-image-name.sh, or set it to
   # ${{ github.event.repository.name }} to always follow the repository name.
-  IMAGE_NAME: "myimage"
+  IMAGE_NAME: "terrene"
   IMAGE_DESC: "My personal bootable container image"
   # Lowercased in the build step - ghcr.io rejects uppercase names.
   IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"

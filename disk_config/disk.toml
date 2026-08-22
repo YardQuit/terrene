@@ -22,4 +22,4 @@ groups = ["wheel"]             # wheel = allowed to use sudo
 # key = "ssh-ed25519 AAAA... you@example.com"
 
 # [customizations]
-# hostname = "myimage"
+# hostname = "terrene"
