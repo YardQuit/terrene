@@ -315,7 +315,7 @@ dnf5 -y copr disable atim/starship
 
 # dnf5 config-manager addrepo --from-repofile=https://example.com/example.repo
 # dnf5 -y install example-package
-dnf install -y https://github.com/YardQuit/csvdt/releases/download/rpm-release/csvdt.x86_64.rpm
+dnf5 -y install https://github.com/YardQuit/csvdt/releases/download/rpm-release/csvdt.x86_64.rpm
 
 ### 7. Clean up #############################################################
 ##
