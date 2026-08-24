@@ -19,8 +19,10 @@ clang
 clippy
 cmake
 cronie-anacron
+crontabs
 dislocker
 distrobox
+dnf5-plugins
 easyeffects
 emacs
 enchant
@@ -61,6 +63,7 @@ gstreamer1-plugins-good-gtk
 gstreamer1-plugins-ugly-free
 guile30
 helix
+htop
 hunspell-en-US
 hunspell-sv
 iftop
@@ -106,6 +109,7 @@ pipewire-utils
 pkgconf-pkg-config
 plymouth
 plymouth-system-theme
+podman-compose
 poppler
 poppler-devel
 poppler-glib
@@ -115,6 +119,7 @@ ptyxis
 pv
 python3-pylint
 rclone
+ripgrep
 rpi-imager
 rpm-build
 rpm-devel
@@ -134,11 +139,13 @@ tailscale
 tcpdump
 telnet
 tldr
+tmux
 translate-shell
 tuned
 valgrind
 wireguard-tools
 wireplumber
+wl-clipboard
 wodim
 xorriso
 ykocli
