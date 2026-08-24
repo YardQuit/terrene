@@ -87,10 +87,10 @@ echo "${DONKEY_SHA256}  /etc/skel/.config/emacs/donkey/donkey.el" | sha256sum -c
 ## The trade-off: /opt is then read-only on the running system, so you can no
 ## longer drop files into /opt by hand. Uncomment to enable:
 
-# if [ -L /opt ]; then
-#     rm /opt
-#     mkdir /opt
-# fi
+if [ -L /opt ]; then
+    rm /opt
+    mkdir /opt
+fi
 
 ## Some applications insist on writing inside their own directory. Move those
 ## directories to /var and leave a symlink behind - this is what the bootc
@@ -129,15 +129,15 @@ echo "${DONKEY_SHA256}  /etc/skel/.config/emacs/donkey/donkey.el" | sha256sum -c
 ## first real user gets. Creating them as system groups first means the package
 ## reuses them, and the setgid helper binaries end up owned by a system group.
 
-# groupadd -r onepassword
-# groupadd -r onepassword-mcp
+groupadd -r onepassword
+groupadd -r onepassword-mcp
 
-# rpm --import https://downloads.1password.com/linux/keys/1password.asc
-# dnf5 -y install https://downloads.1password.com/linux/rpm/stable/x86_64/1password-latest.rpm
+rpm --import https://downloads.1password.com/linux/keys/1password.asc
+dnf5 -y install https://downloads.1password.com/linux/rpm/stable/x86_64/1password-latest.rpm
 
 # ## The package drops in a dnf repository for its own auto-updates. An image
 # ## updates when you rebuild it, so the file has no purpose here.
-# rm -f /etc/yum.repos.d/1password.repo
+rm -f /etc/yum.repos.d/1password.repo
 
 ## Two things the package's install step does that are worth knowing about:
 ##
@@ -195,9 +195,9 @@ echo "${DONKEY_SHA256}  /etc/skel/.config/emacs/donkey/donkey.el" | sha256sum -c
 ## - a genuine download or dependency failure still stops the build. The same
 ## shape works for any vendor RPM with a scriptlet that misbehaves in a container.
 
-# dnf5 -y install https://mega.nz/linux/repo/Fedora_44/x86_64/megasync-Fedora_44.x86_64.rpm \
-#     || echo "megasync: dnf5 exited non-zero (expected) - verifying"
-# rpm -q megasync
+dnf5 -y install https://mega.nz/linux/repo/Fedora_44/x86_64/megasync-Fedora_44.x86_64.rpm \
+    || echo "megasync: dnf5 exited non-zero (expected) - verifying"
+rpm -q megasync
 
 ## The inotify limit belongs in a sysctl.d drop-in applied at boot instead, e.g.
 ## build_files/sysfiles/usr/lib/sysctl.d/90-megasync-inotify.conf containing:
@@ -205,7 +205,7 @@ echo "${DONKEY_SHA256}  /etc/skel/.config/emacs/donkey/donkey.el" | sha256sum -c
 ##   fs.inotify.max_user_watches = 524288
 
 # ## As with 1Password: a dnf repository for auto-updates, of no use in an image.
-# rm -f /etc/yum.repos.d/megasync.repo
+rm -f /etc/yum.repos.d/megasync.repo
 
 ## The command line client is published the same way, if you prefer it:
 
@@ -296,9 +296,9 @@ rm -f /etc/skel/.emacs
 ## Enable the repo, install, then disable it again so the finished image does
 ## not keep pulling from it at runtime.
 
-# dnf5 -y copr enable atim/starship
-# dnf5 -y install starship
-# dnf5 -y copr disable atim/starship
+dnf5 -y copr enable atim/starship
+dnf5 -y install starship
+dnf5 -y copr disable atim/starship
 
 ### 5. Optional: RPMs from a URL ############################################
 
@@ -315,6 +315,7 @@ rm -f /etc/skel/.emacs
 
 # dnf5 config-manager addrepo --from-repofile=https://example.com/example.repo
 # dnf5 -y install example-package
+sudo dnf install https://github.com/YardQuit/csvdt/releases/download/rpm-release/csvdt.x86_64.rpm
 
 ### 7. Clean up #############################################################
 ##
@@ -414,7 +415,7 @@ systemctl mask systemd-remount-fs.service
 ## Examples:
 
 # systemctl enable sshd.service
-# systemctl enable tailscaled.service   # needs a third-party repo, section 6
+systemctl enable tailscaled.service   # needs a third-party repo, section 6
 # systemctl --global enable some-user-unit.service   # for every user session
 
 ### 9. Optional: tweak configuration ########################################
@@ -431,14 +432,14 @@ systemctl mask systemd-remount-fs.service
 ## regular file. Resolve it first, then edit the real target, then check the
 ## result - for a firewall setting a silent no-op is the worst outcome.
 
-# FIREWALLD_CONF="$(readlink -f /etc/firewalld/firewalld.conf)"
-# cp "${FIREWALLD_CONF}" "${FIREWALLD_CONF}.bak"
-# if grep -q '^DefaultZone=' "${FIREWALLD_CONF}"; then
-#     sed -i 's/^DefaultZone=.*/DefaultZone=drop/' "${FIREWALLD_CONF}"
-# else
-#     echo 'DefaultZone=drop' >> "${FIREWALLD_CONF}"
-# fi
-# firewall-offline-cmd --get-default-zone | grep -qx drop
+FIREWALLD_CONF="$(readlink -f /etc/firewalld/firewalld.conf)"
+cp "${FIREWALLD_CONF}" "${FIREWALLD_CONF}.bak"
+if grep -q '^DefaultZone=' "${FIREWALLD_CONF}"; then
+    sed -i 's/^DefaultZone=.*/DefaultZone=drop/' "${FIREWALLD_CONF}"
+else
+    echo 'DefaultZone=drop' >> "${FIREWALLD_CONF}"
+fi
+firewall-offline-cmd --get-default-zone | grep -qx drop
 
 ## Example: require a YubiKey for sudo (pam_yubico is in rpm_packages already).
 ##
@@ -450,12 +451,12 @@ systemctl mask systemd-remount-fs.service
 ## You must also enrol a key (ykpamcfg -2) before booting the image, or sudo will
 ## reject you; /etc/pam.d/sudo.bak is left behind for recovery.
 
-# if ! find /usr/lib64/security /usr/lib/security -name pam_yubico.so -print -quit 2>/dev/null | grep -q .; then
-#     echo "ERROR: pam_yubico.so not found - refusing to edit /etc/pam.d/sudo." >&2
-#     exit 1
-# fi
-# cp /etc/pam.d/sudo /etc/pam.d/sudo.bak
-# sed -i '/PAM-1.0/a\auth       required     pam_yubico.so mode=challenge-response' /etc/pam.d/sudo
+if ! find /usr/lib64/security /usr/lib/security -name pam_yubico.so -print -quit 2>/dev/null | grep -q .; then
+    echo "ERROR: pam_yubico.so not found - refusing to edit /etc/pam.d/sudo." >&2
+    exit 1
+fi
+cp /etc/pam.d/sudo /etc/pam.d/sudo.bak
+sed -i '/PAM-1.0/a\auth       required     pam_yubico.so mode=challenge-response' /etc/pam.d/sudo
 
 ### 9a. Identify this image in /etc/os-release ##############################
 ##
@@ -472,7 +473,7 @@ systemctl mask systemd-remount-fs.service
 ## Each field follows the convention it already uses:
 ##   VARIANT / VARIANT_ID   the edition on top of the distribution, so
 ##                          "COSMIC Atomic" / cosmic-atomic becomes
-##                          "MYIMAGE Atomic" / myimage-atomic
+##                          "TERRENE Atomic" / terrene-atomic
 ##   VERSION / PRETTY_NAME  carry that same label while keeping the base's build
 ##                          number, so the version follows the base forward on
 ##                          its own rather than being hardcoded here
@@ -520,16 +521,16 @@ OS_BUILD="$(. "${OS_RELEASE}"; printf '%s' "${VERSION:-}")"
 OS_BUILD="${OS_BUILD%% *}"
 [ -n "${OS_BUILD}" ] || OS_BUILD="$(. "${OS_RELEASE}"; printf '%s' "${VERSION_ID:-}")"
 ##
-os_release_set VARIANT           "\"MYIMAGE Atomic\""
-os_release_set VARIANT_ID        "myimage-atomic"
-os_release_set VERSION           "\"${OS_BUILD} (MYIMAGE Atomic)\""
-os_release_set PRETTY_NAME       "\"${OS_NAME} ${OS_BUILD} (MYIMAGE Atomic)\""
-os_release_set DEFAULT_HOSTNAME  "\"myimage\""
-os_release_set HOME_URL          "\"https://github.com/myorg/myimage\""
-os_release_set DOCUMENTATION_URL "\"https://github.com/myorg/myimage\""
-os_release_set SUPPORT_URL       "\"https://github.com/myorg/myimage/issues\""
-os_release_set BUG_REPORT_URL    "\"https://github.com/myorg/myimage/issues\""
-os_release_set IMAGE_ID          "myimage"
+os_release_set VARIANT           "\"TERRENE Atomic\""
+os_release_set VARIANT_ID        "terrene-atomic"
+os_release_set VERSION           "\"${OS_BUILD} (TERRENE Atomic)\""
+os_release_set PRETTY_NAME       "\"${OS_NAME} ${OS_BUILD} (TERRENE Atomic)\""
+os_release_set DEFAULT_HOSTNAME  "\"terrene\""
+os_release_set HOME_URL          "\"https://github.com/yardquit/terrene\""
+os_release_set DOCUMENTATION_URL "\"https://github.com/yardquit/terrene\""
+os_release_set SUPPORT_URL       "\"https://github.com/yardquit/terrene/issues\""
+os_release_set BUG_REPORT_URL    "\"https://github.com/yardquit/terrene/issues\""
+os_release_set IMAGE_ID          "terrene"
 os_release_set IMAGE_VERSION     "\"${OS_BUILD}\""
 ##
 ## On a Fedora base, abrt uses these to file crashes against Fedora's Bugzilla.
@@ -545,10 +546,10 @@ sed -i '/^REDHAT_BUGZILLA_PRODUCT=/d
 ## matched nothing is the failure mode this whole section is built to avoid.
 ##
 ( . "${OS_RELEASE}"
-  [ "${VARIANT_ID:-}" = "myimage-atomic" ] || { echo "os-release: VARIANT_ID not applied" >&2; exit 1; }
-  [ "${IMAGE_ID:-}" = "myimage" ]          || { echo "os-release: IMAGE_ID not applied" >&2; exit 1; }
+  [ "${VARIANT_ID:-}" = "terrene-atomic" ] || { echo "os-release: VARIANT_ID not applied" >&2; exit 1; }
+  [ "${IMAGE_ID:-}" = "terrene" ]          || { echo "os-release: IMAGE_ID not applied" >&2; exit 1; }
   case "${PRETTY_NAME:-}" in
-      *"MYIMAGE Atomic"*) ;;
+      *"TERRENE Atomic"*) ;;
       *) echo "os-release: PRETTY_NAME not applied" >&2; exit 1 ;;
   esac )
 ##
@@ -690,7 +691,7 @@ fi
 ## because no registry is involved. scripts/set-image-name.sh keeps it
 ## current, and "set-image-name.sh --check" - run by build.yml before
 ## anything else - fails the build if it is ever left stale.
-POLICY_SCOPE="${IMAGE_REPO:-ghcr.io/myorg/myimage}"
+POLICY_SCOPE="${IMAGE_REPO:-ghcr.io/yardquit/terrene}"
 
 ## The key filename deliberately carries no project name. Nothing outside
 ## this section reads the path, so naming it after the image would only add

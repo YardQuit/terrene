@@ -1,4 +1,4 @@
-# Myimage
+# Terrene
 
 A template for building your own bootable container image (a "bootc" image):
 a full operating system defined by a `Containerfile`, built by GitHub Actions,
@@ -83,7 +83,7 @@ Commented examples, off by default, cover packages that install into `/opt`
 2. Set the name of your image (and your GitHub user or organisation):
 
    ```bash
-   ./scripts/set-image-name.sh mydesktop myorg
+   ./scripts/set-image-name.sh mydesktop yardquit
    ```
 
    The second argument is your GitHub account or organisation handle - the part
@@ -94,9 +94,9 @@ Commented examples, off by default, cover packages that install into `/opt`
 
    | form | where | example |
    | --- | --- | --- |
-   | lowercase | every image reference - registries reject uppercase | `ghcr.io/myorg/myimage` |
-   | Capitalised | prose, this README's title | `Myimage` |
-   | UPPERCASE | the ISO filename | `Fedora-MYIMAGE-Atomic-44….iso` |
+   | lowercase | every image reference - registries reject uppercase | `ghcr.io/yardquit/terrene` |
+   | Capitalised | prose, this README's title | `Terrene` |
+   | UPPERCASE | the ISO filename | `Fedora-TERRENE-Atomic-44….iso` |
 
    The owner is always lowercased. One caveat: renaming is a whole-word text
    substitution across the repository, README prose included, so avoid naming
@@ -121,7 +121,7 @@ Commented examples, off by default, cover packages that install into `/opt`
 4. Choose a base image in `Containerfile`, and list the packages you want in
    `build_files/rpm_packages`.
 5. Commit and push to your default branch. The build workflow triggers on
-   `main` and `master` and publishes `ghcr.io/myorg/mydesktop:latest` from
+   `main` and `master` and publishes `ghcr.io/yardquit/mydesktop:latest` from
    whichever is your repository's default; if yours is named something else,
    add it to the two branch lists in `.github/workflows/build.yml`. The ISO
    workflow is manual, and `checks.yml` runs on every branch, so neither needs
@@ -129,12 +129,12 @@ Commented examples, off by default, cover packages that install into `/opt`
 6. On the machine you want to run it:
 
    ```bash
-   sudo bootc switch ghcr.io/myorg/mydesktop:latest
+   sudo bootc switch ghcr.io/yardquit/mydesktop:latest
    systemctl reboot
    ```
 
    From an existing `rpm-ostree` system, use
-   `rpm-ostree rebase ostree-unverified-registry:ghcr.io/myorg/mydesktop:latest`
+   `rpm-ostree rebase ostree-unverified-registry:ghcr.io/yardquit/mydesktop:latest`
    instead.
 
 The first push also creates the package on GitHub. It starts out **private** -
@@ -289,13 +289,13 @@ rename the image already identifies as yours (delete the section to keep the
 base's identity instead):
 
 ```
-VERSION="44.20260819.0 (MYIMAGE Atomic)"
-PRETTY_NAME="Fedora Linux 44.20260819.0 (MYIMAGE Atomic)"
-VARIANT="MYIMAGE Atomic"
-VARIANT_ID=myimage-atomic
-IMAGE_ID=myimage
+VERSION="44.20260819.0 (TERRENE Atomic)"
+PRETTY_NAME="Fedora Linux 44.20260819.0 (TERRENE Atomic)"
+VARIANT="TERRENE Atomic"
+VARIANT_ID=terrene-atomic
+IMAGE_ID=terrene
 IMAGE_VERSION="44.20260819.0"
-DEFAULT_HOSTNAME="myimage"
+DEFAULT_HOSTNAME="terrene"
 HOME_URL / DOCUMENTATION_URL / SUPPORT_URL / BUG_REPORT_URL -> your repository
 ```
 
@@ -319,7 +319,7 @@ CI derives from them is unaffected.
 ## Building locally
 
 ```bash
-./scripts/build.sh                  # localhost/myimage:latest
+./scripts/build.sh                  # localhost/terrene:latest
 ./scripts/build-disk.sh iso         # installer ISO   -> ./output/
 ./scripts/build-disk.sh qcow2       # VM disk image   -> ./output/
 ```
@@ -418,8 +418,8 @@ The ISO is named after what is inside the image rather than after anything
 hardcoded, so changing the base in the `Containerfile` renames it by itself:
 
 ```
-Fedora-MYIMAGE-Atomic-44.20260819.0.iso     # from a Fedora base
-CentOS-MYIMAGE-Atomic-10.iso                # from a CentOS Stream base
+Fedora-TERRENE-Atomic-44.20260819.0.iso     # from a Fedora base
+CentOS-TERRENE-Atomic-10.iso                # from a CentOS Stream base
 ```
 
 The distribution and version come from the image's `/etc/os-release`, and the
@@ -482,7 +482,7 @@ When a fix lands in the template and you want it, copy the file down and run
 the rename again with the values you already use:
 
 ```bash
-./scripts/set-image-name.sh mydesktop myorg   # the same values as before
+./scripts/set-image-name.sh mydesktop yardquit   # the same values as before
 ```
 
 <!-- template-literals -->
@@ -625,7 +625,7 @@ Others can then verify an image with:
 
 ```bash
 cosign verify --key build_files/cosign.pub \
-  --insecure-ignore-tlog=true ghcr.io/myorg/myimage:latest
+  --insecure-ignore-tlog=true ghcr.io/yardquit/terrene:latest
 ```
 
 `--insecure-ignore-tlog=true` is required, not optional. The signing step
@@ -705,7 +705,7 @@ cat > policy.json <<'EOF'
   "default": [{ "type": "reject" }],
   "transports": {
     "docker": {
-      "ghcr.io/myorg/myimage": [
+      "ghcr.io/yardquit/terrene": [
         {
           "type": "sigstoreSigned",
           "keyPath": "/tmp/verify/cosign.pub",
@@ -719,12 +719,12 @@ EOF
 
 cat > registries.d/ghcr.yaml <<'EOF'
 docker:
-  ghcr.io/myorg/myimage:
+  ghcr.io/yardquit/terrene:
     use-sigstore-attachments: true
 EOF
 
 skopeo --policy policy.json --registries.d registries.d \
-  copy docker://ghcr.io/myorg/myimage:latest dir:./copy
+  copy docker://ghcr.io/yardquit/terrene:latest dir:./copy
 ```
 
 An unsigned image, one signed with a different key, or one whose signature the
