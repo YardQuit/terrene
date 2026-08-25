@@ -1,3 +1,12 @@
+# Packages installed into the image, one per line.
+#
+# Not everything the image installs is here. Anything a later section of
+# build.sh needs by name - tuned and firewalld for the units section 8 enables,
+# cronie-anacron for crond, plymouth for the splash screen, tailscale for
+# tailscaled - is installed there instead, beside the thing that needs it.
+# Rewriting this list is expected; losing a service out of the image while
+# doing it is not, and that is what the split prevents.
+
 NetworkManager-tui
 PackageKit-gstreamer-plugin
 alacritty
@@ -18,8 +27,6 @@ chromium
 clang
 clippy
 cmake
-cronie-anacron
-crontabs
 dislocker
 distrobox
 dnf5-plugins
@@ -38,7 +45,6 @@ fedora-packager
 fedora-review
 fedrq
 feh
-firewalld
 fontawesome-fonts-all
 fzf
 gh
@@ -107,8 +113,6 @@ pipewire-gstreamer
 pipewire-pulseaudio
 pipewire-utils
 pkgconf-pkg-config
-plymouth
-plymouth-system-theme
 podman-compose
 poppler
 poppler-devel
@@ -135,14 +139,12 @@ s3fs-fuse
 sqlite
 sshfs
 strace
-tailscale
 tcpdump
 telnet
 tldr
 tmux
 translate-shell
 trayscale
-tuned
 valgrind
 wireguard-tools
 wireplumber

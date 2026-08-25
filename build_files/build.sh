@@ -252,16 +252,75 @@ PACKAGES=$({ grep -vE '^\s*(#|$)' "${CTX}/rpm_packages" || true; } | tr '\n' ' '
 ## "rpm -q --whatprovides" is what decides, rather than the package name alone,
 ## so a name satisfied by a virtual provide or by a renamed package still
 ## counts as installed.
-## dnf5 on Fedora, dnf on CentOS Stream, which ships dnf 4 and no dnf5 at all.
-## The flag differs too - dnf 4 has no --skip-unavailable, and its equivalent is
-## strict=0 - so swapping the binary alone is not enough. Without this the very
-## first package install dies on a base the Containerfile offers by name.
+## "dnf" is the right command on every base the Containerfile offers. It
+## resolves to /usr/bin/dnf5 on Fedora, Hummingbird and the Atomic Desktops,
+## and to /usr/bin/dnf-3 on CentOS Stream and AlmaLinux. So there is no version
+## to detect here - only a command to run, provided the flags mean the same to
+## both. They do, but not the ones you would reach for first:
+##
+##   --skip-unavailable   dnf5 only; dnf 4 exits 2, "unknown option".
+##   --skip-broken        both, but on dnf5 it covers only the broken half - a
+##                        name no repository carries still fails.
+##   --setopt=strict=0    both, and on both it covers the pair: a name nothing
+##                        provides, and a name whose dependencies cannot be
+##                        met. That is what dnf 4 documents it as, and dnf5
+##                        honours it - measured, not assumed.
+##
+## So: one invocation rather than a branch per version. That is worth more than
+## tidiness. This was two branches written to be equivalent, and they were not
+## - the dnf5 side passed --skip-unavailable alone, so a repository carrying a
+## package with an unmeetable dependency built on CentOS and stopped on Fedora.
+## Two things that must agree eventually do not; one thing cannot disagree with
+## itself.
+##
+## The risk traded for that is dnf5 someday dropping strict. It fails loudly if
+## it does: an unrecognised --setopt is exit 2 on dnf5. And base-check.yml runs
+## this exact flag against every base weekly, so it would show up there first.
+##
+## A zypper clause would go in the refusal below, and openSUSE is RPM so the
+## record further down would still work. It is absent on purpose: there is no
+## openSUSE bootc base image to point it at - not on registry.opensuse.org,
+## registry.suse.com or quay - and an installer this template can drive is not
+## the same thing as a base bootc can boot. A branch nothing can run is a
+## branch nothing can test, which is how it would come to be wrong quietly.
+if ! command -v dnf >/dev/null 2>&1; then
+    echo "ERROR: this base has no dnf, so nothing here can install a package." >&2
+    echo "Every base the Containerfile offers has one - on Fedora it is dnf5" >&2
+    echo "under that name. If you changed the base, check that it is an RPM" >&2
+    echo "one; the list of what is known to work is at the top of that file." >&2
+    exit 1
+fi
+
+## Both installers clean up after themselves. dnf leaves repo metadata under
+## /var/lib/dnf and lock files under /run, both of which land in the image and
+## both of which "bootc container lint" flags - as "content in runtime-only
+## directories" and "content in /var missing systemd tmpfiles.d entries". That
+## used to be a single "rm -rf" in section 7, which was right only while this
+## section was the last thing to run dnf. Sections 8 and 9b install too, and an
+## install after that point puts the pair straight back. Cleaning inside the
+## installer cannot be outlived by an install added later.
+pkg_cleanup() {
+    rm -rf /var/lib/dnf /run/dnf
+}
+
+## The rpm_packages list: a name that cannot be installed is recorded and the
+## build carries on.
+pkg_install_optional() {
+    dnf install --setopt=strict=0 -y "$@"
+    pkg_cleanup
+}
+
+## A package a later section needs by name: no skip flag, so a missing one
+## stops the build where the package is named, rather than three sections later
+## where only a systemd unit is. Safe to call for something the base already
+## has - dnf says so and exits 0.
+pkg_install() {
+    dnf install -y "$@"
+    pkg_cleanup
+}
+
 if [ -n "${PACKAGES}" ]; then
-    if command -v dnf5 >/dev/null 2>&1; then
-        dnf5 install --skip-unavailable -y ${PACKAGES}
-    else
-        dnf install --setopt=strict=0 -y ${PACKAGES}
-    fi
+    pkg_install_optional ${PACKAGES}
 fi
 
 install -d -m 0755 /usr/share/image-build
@@ -273,7 +332,7 @@ rpm -q --whatprovides ${PACKAGES} 2>&1 \
 chmod 0644 /usr/share/image-build/skipped-packages
 
 if [ -s /usr/share/image-build/skipped-packages ]; then
-    echo "### PACKAGES NOT INSTALLED - the repos provide none of these:"
+    echo "### PACKAGES NOT INSTALLED - not in the repos, or not installable:"
     sed 's/^/###   /' /usr/share/image-build/skipped-packages
     echo "### Recorded in the image at /usr/share/image-build/skipped-packages"
 fi
@@ -330,22 +389,34 @@ dnf5 -y install https://github.com/YardQuit/csvdt/releases/download/rpm-release/
 ## Containerfile: without them /var/cache is ordinary image content, and a few
 ## hundred megabytes of it.
 ##
-## What does end up in the image is what dnf leaves outside those mounts: repo
-## metadata under /var/lib/dnf and lock files under /run. Both are runtime state
-## rather than image content, and "bootc container lint" flags them as "content
-## in runtime-only directories" and "content in /var missing systemd tmpfiles.d
-## entries".
-rm -rf /var/lib/dnf /run/dnf
+## The state dnf does leave outside those mounts - repo metadata under
+## /var/lib/dnf, lock files under /run - is removed by pkg_cleanup, which runs
+## as part of every install rather than once here. See section 3 for why: this
+## spot is no longer after the last dnf invocation.
 
 ### 8. Enable systemd units #################################################
 ##
-## The units must exist in the image (i.e. their package is installed above).
+## The units have to exist in the image, so the packages carrying them are
+## installed right here rather than left to rpm_packages. That list is one you
+## are meant to rewrite, and a rewrite that drops one of these does not fail
+## where you edited it - it fails here, with
+##
+##   Failed to enable unit: Unit tuned.service does not exist
+##
+## which points at systemd rather than at the line you deleted. Installing them
+## beside the enable also means a feature you do not want is two adjacent lines
+## to comment out, instead of an edit in two files that have to agree.
+##
+## podman.socket, fstrim.timer and the bootc timer further down need nothing
+## added: every base the Containerfile offers already ships them.
+pkg_install tuned firewalld crontabs cronie-anacron
+
 systemctl enable podman.socket
 systemctl enable fstrim.timer
 
-## tuned and firewalld come from rpm_packages. Fedora's presets already enable
-## both the moment they are installed - saying so here is explicit rather than
-## depending on a preset that could change under you.
+## Fedora's presets already enable tuned and firewalld the moment they are
+## installed - saying so here is explicit rather than depending on a preset
+## that could change under you.
 systemctl enable tuned.service
 systemctl enable firewalld.service
 
@@ -412,10 +483,16 @@ systemctl enable bootc-fetch-apply-updates.timer
 ## ever build this image on a base that does not use composefs for /.
 systemctl mask systemd-remount-fs.service
 
-## Examples:
+## Examples. The first needs no package: openssh-server is already installed in
+## every base the Containerfile offers. The second does, so it brings its own
+## install line - Fedora packages tailscale itself, in the always-enabled
+## "fedora" and "updates" repos, so no third-party repo is involved.
 
 # systemctl enable sshd.service
-systemctl enable tailscaled.service   # needs a third-party repo, section 6
+
+pkg_install tailscale
+systemctl enable tailscaled.service
+
 # systemctl --global enable some-user-unit.service   # for every user session
 
 ### 9. Optional: tweak configuration ########################################
@@ -566,13 +643,17 @@ sed -i '/^REDHAT_BUGZILLA_PRODUCT=/d
 ##      neither, and installing the package is not enough on its own - the
 ##      initramfs is prebuilt in the base and a layered package does not change
 ##      it, so it has to be regenerated here. (plymouth and
-##      plymouth-system-theme are in rpm_packages.)
+##      plymouth-system-theme are installed just below, for the same reason
+##      section 8 installs its own: a rewritten rpm_packages must not be able
+##      to take the splash screen with it.)
 ##   2. the "rhgb" kernel argument, which is what tells plymouth to draw
 ##      anything. That is shipped as
 ##      build_files/sysfiles/usr/lib/bootc/kargs.d/00-graphical-boot.toml and
 ##      applied by bootc when the image is installed or switched to; "bootc
 ##      container lint" parses the file, so a mistake in it fails the build.
-##
+
+pkg_install plymouth plymouth-system-theme
+
 ## A bootc image carries exactly one kernel, so this glob resolves to one entry.
 KVER="$(basename /usr/lib/modules/*)"
 INITRAMFS="/usr/lib/modules/${KVER}/initramfs.img"
