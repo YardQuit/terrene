@@ -1,0 +1,155 @@
+---
+# Can the base still install what build.sh asks for?
+#
+# Nothing here builds an image. It asks the one question that goes stale on its
+# own - the base image and its repositories change on Fedora's schedule, not on
+# this repository's, so a package renamed or dropped upstream breaks a build
+# that worked yesterday and nothing here would notice until the next push.
+#
+# Two questions, and they fail differently:
+#
+#   the rpm_packages list   Resolved and downloaded with the same flag section 3
+#                           of build.sh installs it with. This must not fail:
+#                           the whole point of strict=0 is that a package list
+#                           cannot break a build. Names that no longer resolve
+#                           are listed rather than failed - that is the to-do
+#                           list after a base bump, not an emergency.
+#
+#   the names by pkg_install  What build.sh installs by name, read out of the
+#                           file rather than repeated here. Those calls carry no
+#                           skip flag, so a name the repositories stop carrying
+#                           is a stopped build. That one is a failure.
+#
+# Why the list is only downloaded and not installed: it is 152 names, which dnf
+# reports as 2 GiB to fetch and 7 GiB installed. A GitHub-hosted runner has
+# around 14 GiB in total and the base image is 6 GiB of it, so a real install
+# would fail on disk rather than on anything true. Downloading still does the
+# whole depsolve, which is where a renamed or dropped package shows up. What it
+# does not cover is a failure during installation - a scriptlet, a file
+# conflict - and the nightly image build covers those.
+#
+# The base and the by-name packages are read from Containerfile and build.sh, so
+# changing either is picked up here with no second place to edit. The dnf flag
+# is the one thing repeated, and the first step checks that copy against the
+# original.
+#
+# Scheduled rather than run on every push, because what changes is the base, not
+# this repository. Run it by hand from the Actions tab after editing
+# rpm_packages or a pkg_install line - the other time the answer moves.
+name: Base check
+
+on:
+  schedule:
+    - cron: "30 05 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  base:
+    name: The base still provides what build.sh installs
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # This workflow repeats one dnf flag, because it runs dnf against a bare
+      # base rather than through build.sh. Two copies of the same thing drift,
+      # so the copy is checked rather than trusted: change section 3 and this
+      # fails here, naming the line to update, instead of quietly testing
+      # something the build no longer does.
+      - name: The dnf flag below still matches build.sh
+        run: |
+          set -euo pipefail
+          if ! grep -q -- 'dnf install --setopt=strict=0 -y' build_files/build.sh; then
+            echo "build_files/build.sh no longer installs the package list with" >&2
+            echo "\"dnf install --setopt=strict=0 -y\". Update the step below to" >&2
+            echo "match section 3, then rerun." >&2
+            exit 1
+          fi
+          echo "the flag matches section 3 of build.sh"
+
+      # Read out of the repository rather than written here twice.
+      - name: Work out the base and the by-name packages
+        id: inputs
+        run: |
+          set -euo pipefail
+          base="$(sed -n 's|^FROM \(quay\.io.*\)$|\1|p' Containerfile | tail -n1)"
+          named="$(grep -oP '(?<=^pkg_install ).*' build_files/build.sh | tr '\n' ' ')"
+          [ -n "${base}" ]  || { echo "no FROM quay.io/... in Containerfile" >&2; exit 1; }
+          [ -n "${named}" ] || { echo "no pkg_install lines in build.sh" >&2; exit 1; }
+          echo "base=${base}"   >> "${GITHUB_OUTPUT}"
+          echo "named=${named}" >> "${GITHUB_OUTPUT}"
+          echo "base:  ${base}"
+          echo "named: ${named}"
+
+      - name: The rpm_packages list still resolves
+        env:
+          BASE: ${{ steps.inputs.outputs.base }}
+        run: |
+          set -euo pipefail
+          podman run --rm \
+            --volume "${PWD}/build_files/rpm_packages:/rpm_packages:ro" \
+            "${BASE}" bash -c '
+              set -uo pipefail
+              PACKAGES=$({ grep -vE "^\s*(#|$)" /rpm_packages || true; } | tr "\n" " ")
+              [ -n "${PACKAGES}" ] || { echo "rpm_packages is empty - nothing to check"; exit 0; }
+              dnf install --setopt=strict=0 -y --downloadonly ${PACKAGES} > /tmp/dnf.log 2>&1
+              rc=$?
+              cat /tmp/dnf.log
+              echo
+              echo "asked for $(wc -w <<<"${PACKAGES}") names; these did not resolve:"
+              { grep -oP "(?<=No match for argument: ).*" /tmp/dnf.log || true; } | sed "s/^/  /"
+              exit "${rc}"
+            ' 2>&1 | tee "${RUNNER_TEMP}/list.log"
+
+          {
+            echo "### Package list"
+            echo
+            echo "Base: \`${BASE}\`"
+            echo
+            echo '```'
+            sed -n '/did not resolve:/,$p' "${RUNNER_TEMP}/list.log"
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      # No skip flag on these, so a missing one is a stopped build rather than a
+      # gap in the image. Small enough to install for real.
+      - name: The packages build.sh installs by name
+        env:
+          BASE: ${{ steps.inputs.outputs.base }}
+          NAMED: ${{ steps.inputs.outputs.named }}
+        run: |
+          set -euo pipefail
+          if podman run --rm "${BASE}" bash -c "set -euo pipefail; dnf install -y ${NAMED}" \
+               > "${RUNNER_TEMP}/named.log" 2>&1; then
+            echo "all of these install: ${NAMED}"
+            {
+              echo "### Packages installed by name"
+              echo
+              echo '```'
+              echo "all install: ${NAMED}"
+              echo '```'
+            } >> "${GITHUB_STEP_SUMMARY}"
+          else
+            {
+              echo "### Packages installed by name"
+              echo
+              echo "MISSING - build.sh installs these by name and stops when one is gone:"
+              echo
+              echo '```'
+              grep -E "No match for argument|nothing provides" "${RUNNER_TEMP}/named.log" \
+                | sed 's/^/  /' || true
+              echo '```'
+            } >> "${GITHUB_STEP_SUMMARY}"
+            echo "A build on ${BASE} is broken right now: build.sh installs these" >&2
+            echo "by name, with no skip flag, so one of them going away stops the" >&2
+            echo "build. Either the base dropped a package or it renamed one." >&2
+            cat "${RUNNER_TEMP}/named.log" >&2
+            exit 1
+          fi
