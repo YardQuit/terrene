@@ -486,8 +486,11 @@ dnf5 -y copr disable atim/starship
 # dnf5 -y install example-package
 # --------------------------------------------------------------------------
 
+## YardQuit CSVDT
 dnf5 -y install https://github.com/YardQuit/csvdt/releases/download/rpm-release/csvdt.x86_64.rpm
 
+## HERDR
+curl -fsSL https://herdr.dev/install.sh | sh
 
 #############################################################################
 ## 7. Clean up
