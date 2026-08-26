@@ -490,7 +490,18 @@ dnf5 -y copr disable atim/starship
 dnf5 -y install https://github.com/YardQuit/csvdt/releases/download/rpm-release/csvdt.x86_64.rpm
 
 ## HERDR
-curl -fsSL https://herdr.dev/install.sh | sh
+##
+## HERDR_INSTALL_DIR is set because the installer defaults to $HOME/.local/bin,
+## and on an ostree base /root is a symlink to var/roothome, which does not
+## exist during a build - so the installer's "mkdir -p" stops on the dangling
+## link with "cannot create directory '/root': File exists" and takes the build
+## with it. /usr/local/bin fails the same way; it is a symlink to var/usrlocal.
+##
+## /usr/bin is also where the binary belongs. Anything written under /var is
+## not image content: it seeds the filesystem once, at install, and a later
+## "bootc upgrade" would leave the old copy in place. Under /usr it is versioned
+## with the image, upgrades with it, and rolls back with it.
+curl -fsSL https://herdr.dev/install.sh | HERDR_INSTALL_DIR=/usr/bin sh
 
 #############################################################################
 ## 7. Clean up
