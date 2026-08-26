@@ -477,7 +477,7 @@ dnf5 -y copr disable atim/starship
 
 
 #############################################################################
-## 6. Optional: third-party repos
+## 6. Optional: third-party repos and upstream installers
 #############################################################################
 
 # --- a third-party repo: uncomment every line down to the next ruler
@@ -486,21 +486,54 @@ dnf5 -y copr disable atim/starship
 # dnf5 -y install example-package
 # --------------------------------------------------------------------------
 
+## An upstream "curl | sh" installer needs one thing said to it: where to put
+## the binary.
+##
+## They are written for a running machine, so they default to a per-user
+## directory - $HOME/.local/bin most often, sometimes /usr/local/bin or /opt.
+## On every base the Containerfile offers, /root and /home are symlinks into
+## /var; on the Fedora Atomic desktops and Hummingbird, /usr/local and /opt are
+## too. What that does to a build depends on the base, which is the awkward
+## part:
+##
+##   Where the target does not exist in the base image - the desktops,
+##   fedora-bootc, AlmaLinux - "mkdir -p" can neither follow the dangling link
+##   nor replace it, so the installer stops and takes the build with it:
+##
+##     mkdir: cannot create directory '/root': File exists
+##
+##   Where it does exist - CentOS Stream and Hummingbird ship a /var/roothome -
+##   the install succeeds and the binary lands in /var, which is not image
+##   content. What a build writes there seeds the filesystem once, at install,
+##   and is the machine's own from then on: "bootc upgrade" leaves the old copy
+##   where it is, and a rollback does not take it back.
+##
+## So one line breaks the build on one base and quietly stops shipping the
+## binary on another. Point the installer at /usr/bin and both go away - it is
+## versioned with the image, upgrades with it and rolls back with it. Most
+## installers carry an environment variable for it; read the script before
+## piping it to a shell and the name is near the top. One that offers neither
+## that nor a plain tarball you can unpack into /usr/bin yourself does not
+## belong in a build - install it from a package instead, or leave it to the
+## user to install into their own home.
+##
+## Section 5 is the better route whenever upstream also ships an RPM.
+
+# --- an upstream installer: uncomment every line down to the next ruler
+# --------------------------------------------------------------------------
+# curl -fsSL https://example.com/install.sh | EXAMPLE_INSTALL_DIR=/usr/bin sh
+# --------------------------------------------------------------------------
+
 ## YardQuit CSVDT
 dnf5 -y install https://github.com/YardQuit/csvdt/releases/download/rpm-release/csvdt.x86_64.rpm
 
 ## HERDR
 ##
-## HERDR_INSTALL_DIR is set because the installer defaults to $HOME/.local/bin,
-## and on an ostree base /root is a symlink to var/roothome, which does not
-## exist during a build - so the installer's "mkdir -p" stops on the dangling
-## link with "cannot create directory '/root': File exists" and takes the build
-## with it. /usr/local/bin fails the same way; it is a symlink to var/usrlocal.
-##
-## /usr/bin is also where the binary belongs. Anything written under /var is
-## not image content: it seeds the filesystem once, at install, and a later
-## "bootc upgrade" would leave the old copy in place. Under /usr it is versioned
-## with the image, upgrades with it, and rolls back with it.
+## /usr/bin rather than the installer's default of $HOME/.local/bin, for the
+## reason set out above. This base is one of the ones where the default fails
+## outright: /root is a symlink to var/roothome and there is no /var/roothome
+## in the image, so the installer's "mkdir -p" stops on the dangling link and
+## takes the build with it. /usr/local/bin fails the same way here.
 curl -fsSL https://herdr.dev/install.sh | HERDR_INSTALL_DIR=/usr/bin sh
 
 #############################################################################
