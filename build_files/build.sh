@@ -552,6 +552,25 @@ dnf -y copr disable atim/lazygit
 
 ## Sections 2a and 2b are complete, ready-to-uncomment examples of this
 ## (1Password and MEGAsync).
+##
+## Both of those import the vendor's key first, so rpm checks the signature
+## before installing. Not every project signs its packages, and dnf says so
+## rather than refusing:
+##
+##   Warning: skipped OpenPGP checks for 1 package from repository: @commandline
+##
+## That is worth reading rather than tuning out: it means nothing vouches for
+## the file except HTTPS to the host it came from. The block below is one of
+## those - there is no key to import, so there is no line importing one.
+##
+## Its URL carries the tag "rpm-release" rather than a version, so the address
+## is fixed and the file behind it moves. Each build takes whatever is current,
+## the same way section 6's installers do.
+
+# --- CSVDT from a GitHub release: uncomment every line down to the next ruler
+# --------------------------------------------------------------------------
+dnf -y install https://github.com/YardQuit/csvdt/releases/download/rpm-release/csvdt.x86_64.rpm
+# --------------------------------------------------------------------------
 
 
 #############################################################################
@@ -640,9 +659,6 @@ chmod 0644 /usr/share/bash-completion/completions/starship \
            /usr/share/fish/vendor_completions.d/starship.fish
 # --------------------------------------------------------------------------
 
-## YardQuit CSVDT
-dnf -y install https://github.com/YardQuit/csvdt/releases/download/rpm-release/csvdt.x86_64.rpm
-
 # --- herdr, an installer that takes an environment variable
 # --------------------------------------------------------------------------
 ## /usr/bin rather than the installer's default of $HOME/.local/bin, for the
@@ -659,6 +675,7 @@ chmod 0644 /usr/share/bash-completion/completions/herdr \
            /usr/share/zsh/site-functions/_herdr \
            /usr/share/fish/vendor_completions.d/herdr.fish
 # --------------------------------------------------------------------------
+
 
 #############################################################################
 ## 7. Clean up
