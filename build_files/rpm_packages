@@ -144,6 +144,9 @@ telnet
 tldr
 tmux
 translate-shell
+unison
+unison-doc
+unison-gtk
 valgrind
 wireguard-tools
 wireplumber
