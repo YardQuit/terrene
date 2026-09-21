@@ -73,12 +73,14 @@ AO_LIGHT_SHA256="37596b822ba07964c1c1f97c002ed83d72f268a42bdd88adb32ebee749007d2
 GARAMOND_COMMIT="c02250684306c1cc22ebd1dbb9d2878213864a57"   # 1.0.1
 GARAMOND_SHA256="49780832d6eab4322ce195628c7c92d098e9914daa0a07d1110c399b9ebf7e15"
 
+## Fetch one pinned file into /etc/skel/.config/emacs/<repo>/.
+##
 ## The directory is created explicitly: curl's --create-dirs would make it
 ## 0750, and /etc/skel content must be world-readable or copying it by hand
 ## into an existing account fails (section 1's sysfiles copy ships 0755).
-
-install -d -m 0755 /etc/skel/.config/emacs/donkey
-
+## curl creates the file with the build's umask - pin its mode the same way,
+## or a hardened builder (umask 027) ships files other users cannot read.
+##
 ## --retry absorbs the transient registry blip that would otherwise abort a
 ## scheduled CI build; a genuine failure still stops the build once the
 ## retries are spent, and a checksum mismatch stops it right here.
@@ -90,18 +92,25 @@ install -d -m 0755 /etc/skel/.config/emacs/donkey
 ## bound plus one attempt. Without it a server dribbling just fast enough to
 ## dodge the speed check could hold the build for every retry's full
 ## max-time in a row.
+##
+## The owner/repo is spelled out at every call rather than inside the
+## function: scripts/set-image-name.sh recognises these upstream URLs by
+## that literal and leaves the lines alone when the image owner is renamed.
+skel_fetch() {  # $1: owner/repo on GitHub, $2: commit, $3: file, $4: sha256
+    local dir="/etc/skel/.config/emacs/${1#*/}"
+    install -d -m 0755 "${dir}"
+    curl -fL --retry 3 --retry-all-errors --connect-timeout 15 \
+        --speed-limit 1 --speed-time 30 --max-time 120 --retry-max-time 300 \
+        -o "${dir}/$3" "https://raw.githubusercontent.com/$1/$2/$3"
+    chmod 0644 "${dir}/$3"
+    echo "$4  ${dir}/$3" | sha256sum -c -
+}
 
-curl -fL --retry 3 --retry-all-errors --connect-timeout 15 \
-    --speed-limit 1 --speed-time 30 --max-time 120 --retry-max-time 300 \
-    -o /etc/skel/.config/emacs/donkey/donkey.el \
-    "https://raw.githubusercontent.com/YardQuit/donkey/${DONKEY_COMMIT}/donkey.el"
-
-## curl creates the file with the build's umask - pin the mode the same way
-## install -d pinned the directory's, or a hardened builder (umask 027) ships
-## a donkey.el other users cannot read.
-
-chmod 0644 /etc/skel/.config/emacs/donkey/donkey.el
-echo "${DONKEY_SHA256}  /etc/skel/.config/emacs/donkey/donkey.el" | sha256sum -c -
+skel_fetch YardQuit/donkey   "${DONKEY_COMMIT}"   donkey.el         "${DONKEY_SHA256}"
+skel_fetch YardQuit/ao       "${AO_COMMIT}"       ao-theme.el       "${AO_THEME_SHA256}"
+skel_fetch YardQuit/ao       "${AO_COMMIT}"       ao-dark-theme.el  "${AO_DARK_SHA256}"
+skel_fetch YardQuit/ao       "${AO_COMMIT}"       ao-light-theme.el "${AO_LIGHT_SHA256}"
+skel_fetch YardQuit/garamond "${GARAMOND_COMMIT}" garamond.el       "${GARAMOND_SHA256}"
 
 
 #############################################################################
