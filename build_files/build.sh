@@ -56,8 +56,22 @@ chmod -R +x /etc/cron.daily 2>/dev/null || true
 ##   COMMIT=$(git ls-remote https://github.com/YardQuit/donkey master | awk '{print $1}')
 ##   echo $COMMIT; curl -fsSL https://raw.githubusercontent.com/YardQuit/donkey/$COMMIT/donkey.el | sha256sum
 
-DONKEY_COMMIT="20a73688b6c53413ff888ec4e2520633d7841d78"   # 1.7.2
-DONKEY_SHA256="17919b65dd154ca3cdc0473b6f998dc557ed893976cde6e883fa73f50dc99cc8"
+DONKEY_COMMIT="9f172d436ccc352a7240c79f66eec93d6b9a9b31"     # 1.15.0
+DONKEY_SHA256="1305fd0b1e7daf9a2180b7d4686546a2b57359c4fd4405ba1ac855686b3d99c1"
+
+## Ao has no release tags yet, so it is pinned to a commit on master; the
+## comment says when that commit was current.
+
+AO_COMMIT="cd76290a6ebb7336d136d348d298a9b793cf4e3b"         # master, 2026-09-20
+AO_THEME_SHA256="053f50ea5e806139611dc8b76db29f456c5ec20b0af320e969d9d9b1f50657cc"
+AO_DARK_SHA256="d8c3d03344e98701111f64db0ed5e9fb564ea799cf2f0813f39d0751a0f5928d"
+AO_LIGHT_SHA256="37596b822ba07964c1c1f97c002ed83d72f268a42bdd88adb32ebee749007d28"
+
+##   COMMIT=$(git ls-remote https://github.com/YardQuit/garamond master | awk '{print $1}')
+##   echo $COMMIT; curl -fsSL https://raw.githubusercontent.com/YardQuit/garamond/$COMMIT/garamond.el | sha256sum
+
+GARAMOND_COMMIT="c02250684306c1cc22ebd1dbb9d2878213864a57"   # 1.0.1
+GARAMOND_SHA256="49780832d6eab4322ce195628c7c92d098e9914daa0a07d1110c399b9ebf7e15"
 
 ## The directory is created explicitly: curl's --create-dirs would make it
 ## 0750, and /etc/skel content must be world-readable or copying it by hand
