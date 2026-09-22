@@ -107,6 +107,7 @@ packit
 pam_yubico
 pandoc
 pass
+perl-sigtrap
 pinentry-emacs
 pipewire-alsa
 pipewire-gstreamer
