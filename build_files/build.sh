@@ -38,20 +38,25 @@ chmod -R +x /etc/cron.daily 2>/dev/null || true
 
 
 #############################################################################
-## 1a. Donkey - modal editing for Emacs
+## 1a. Donkey, Ao and Garamond - Emacs packages, fetched at build time
 #############################################################################
 ##
-## donkey.el is not packaged in any repo, so fetch it at build time and seed
-## it through /etc/skel, next to the init.el/config.el that section 1 just
-## copied there. Its README wants it at donkey/donkey.el inside the user's
-## Emacs directory; config.el loads it from there and enables donkey-mode.
+## None of these is packaged in any repo, so fetch them at build time and
+## seed them through /etc/skel, next to the init.el/config.el that section 1
+## just copied there. Each gets its own directory inside the user's Emacs
+## directory - donkey/donkey.el, ao/ao-theme.el (with the ao-dark-theme.el
+## and ao-light-theme.el variants beside it) and garamond/garamond.el. Only
+## the source is shipped: config.el byte-compiles each file on the first
+## Emacs start and loads the compiled copy from then on, the way every one
+## of their READMEs installs from a clone.
 ##
-## The fetch is pinned to a commit and checked against a hash: this file is
-## executable elisp that ends up in every account on every machine running
-## the image, and a moved tag or a compromised branch would otherwise walk
-## straight in. The cost is that donkey no longer updates by itself - to
-## move to a newer donkey, look up the commit you want (ls-remote answers
-## for a branch or a tag), hash it, and put both values below:
+## Every fetch is pinned to a commit and checked against a hash: these
+## files are executable elisp that ends up in every account on every
+## machine running the image, and a moved tag or a compromised branch would
+## otherwise walk straight in. The cost is that nothing updates by itself -
+## to move to a newer release, look up the commit you want (ls-remote
+## answers for a branch or a tag), hash every file of that package at that
+## commit, and put the values below. For Donkey:
 ##
 ##   COMMIT=$(git ls-remote https://github.com/YardQuit/donkey master | awk '{print $1}')
 ##   echo $COMMIT; curl -fsSL https://raw.githubusercontent.com/YardQuit/donkey/$COMMIT/donkey.el | sha256sum
