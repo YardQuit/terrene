@@ -7,6 +7,7 @@
 # Rewriting this list is expected; losing a service out of the image while
 # doing it is not, and that is what the split prevents.
 
+ImageMagick-heic
 NetworkManager-tui
 PackageKit-gstreamer-plugin
 alacritty
@@ -83,7 +84,7 @@ just
 kitty
 koji
 liberation-fonts
-libheif
+libheif-tools
 libpst
 libreoffice
 libtool
