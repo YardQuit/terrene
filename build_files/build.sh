@@ -750,35 +750,44 @@ printf 'export DISABLE_AUTOUPDATER=1\n' > /etc/profile.d/claude-code.sh
 chmod 0644 /etc/profile.d/claude-code.sh
 # --------------------------------------------------------------------------
 
-# --- texlab, the LaTeX language server, from its latest GitHub release
+# --- texlab, the LaTeX language server, from a pinned GitHub release
 # --------------------------------------------------------------------------
 ## No installer and no RPM, but a plain tarball holding a single binary -
 ## the case the end of the "curl | sh" notes above leaves room for - so it is
 ## unpacked straight into /usr/bin.
 ##
-## "Latest" is resolved through the GitHub API, which also publishes a sha256
-## for every release asset; the tarball is checked against it before anything
-## is unpacked, the same way the Claude Code block checks its manifest. The
-## API allows 60 unauthenticated requests an hour per address, which a build
-## spends one of.
+## Pinned to a release and checked against a hash, the way section 1a pins
+## the Emacs packages. This used to resolve "latest" through the GitHub API
+## at build time, which is also the only place texlab publishes its hashes -
+## but the API allows 60 unauthenticated requests an hour per address, and
+## once those are spent it answers 403. Behind "read < <(...)" that failure
+## never reaches "set -e": python3 got an empty body and the build stopped
+## on a JSONDecodeError that said nothing about the cause. A release asset
+## URL is not rate limited, so with the hash written down no build depends
+## on the API at all.
+##
+## The cost is that texlab no longer updates by itself. To move to a newer
+## release, put its tag below and take both hashes from the API, once, by
+## hand:
+##
+##   curl -fsSL https://api.github.com/repos/latex-lsp/texlab/releases/latest \
+##     | python3 -c "import json,sys;d=json.load(sys.stdin);print(d['tag_name']);[print(a['name'],a['digest']) for a in d['assets'] if a['name'].endswith('-linux.tar.gz')]"
 ##
 ## texlab writes no shell completions - it is started by an editor, not typed -
 ## so unlike the blocks above there is nothing more to generate.
+TEXLAB_VERSION="v5.26.0"
 case "$(uname -m)" in
-    x86_64)  TEXLAB_ASSET="texlab-x86_64-linux.tar.gz" ;;
-    aarch64) TEXLAB_ASSET="texlab-aarch64-linux.tar.gz" ;;
+    x86_64)  TEXLAB_ASSET="texlab-x86_64-linux.tar.gz"
+             TEXLAB_SHA256="8697bd5e479d4584b14b7eed5c320c80ec4e1d91ebefbb6801e6bf38e9971300" ;;
+    aarch64) TEXLAB_ASSET="texlab-aarch64-linux.tar.gz"
+             TEXLAB_SHA256="a85cdfcd22454b8d8550f4b0f0620c45ab51760f302fac7a12bc18a890f70f8c" ;;
     *) echo "texlab: no published build for $(uname -m)" >&2; exit 1 ;;
 esac
 
-read -r TEXLAB_URL TEXLAB_SHA256 < <(
-    curl -fsSL https://api.github.com/repos/latex-lsp/texlab/releases/latest \
-    | python3 -c "import json,sys
-a=next(a for a in json.load(sys.stdin)['assets'] if a['name']=='${TEXLAB_ASSET}')
-print(a['browser_download_url'], a['digest'].removeprefix('sha256:'))")
-
 TEXLAB_TMP="$(mktemp -d)"
 curl -fL --retry 3 --retry-all-errors --connect-timeout 15 \
-    -o "${TEXLAB_TMP}/${TEXLAB_ASSET}" "${TEXLAB_URL}"
+    -o "${TEXLAB_TMP}/${TEXLAB_ASSET}" \
+    "https://github.com/latex-lsp/texlab/releases/download/${TEXLAB_VERSION}/${TEXLAB_ASSET}"
 echo "${TEXLAB_SHA256}  ${TEXLAB_TMP}/${TEXLAB_ASSET}" | sha256sum -c -
 tar -xzf "${TEXLAB_TMP}/${TEXLAB_ASSET}" -C "${TEXLAB_TMP}" texlab
 install -m 0755 "${TEXLAB_TMP}/texlab" /usr/bin/texlab
