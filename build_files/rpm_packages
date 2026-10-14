@@ -153,6 +153,7 @@ unison
 unison-doc
 unison-gtk
 valgrind
+weasyprint
 wireguard-tools
 wireplumber
 wl-clipboard
