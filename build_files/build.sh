@@ -1019,6 +1019,7 @@ else
 fi
 firewall-offline-cmd --get-default-zone | grep -qx drop
 # --------------------------------------------------------------------------
+firewall-offline-cmd --zone=drop --add-service=ssh
 
 ## Example: require a YubiKey for sudo (pam_yubico is in rpm_packages already).
 ##
