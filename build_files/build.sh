@@ -929,7 +929,7 @@ systemctl mask systemd-remount-fs.service
 
 # --- SSH Server: uncomment every line down to the next ruler
 # --------------------------------------------------------------------------
-# systemctl enable sshd.service
+systemctl enable sshd.service
 # --------------------------------------------------------------------------
 
 # --- Tailscale: uncomment every line down to the next ruler
