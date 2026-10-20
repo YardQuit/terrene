@@ -1496,6 +1496,50 @@ if rules[0].get("keyPath") != key or not os.path.exists(key):
 
 
 #############################################################################
+## 9d. Ao as the default colours - COSMIC, the terminals, the editors
+#############################################################################
+##
+## Ao (https://github.com/YardQuit/ao) is the palette Emacs gets in section
+## 1a; this makes it the out-of-the-box look everywhere else too. Most of it
+## is plain files that section 1 already copied from build_files/sysfiles/:
+##
+##   COSMIC      usr/share/cosmic/com.system76.CosmicTheme.{Dark,Light}{,.Builder}/v2/
+##               the dark and the ao-light themes, as system defaults
+##   kitty       etc/xdg/kitty/kitty.conf
+##   Alacritty   etc/alacritty/alacritty.toml
+##   foot        etc/xdg/foot/ao.ini
+##   Ptyxis      usr/share/glib-2.0/schemas/90_terrene-ao.gschema.override, and
+##               the palette in etc/skel/.local/share/org.gnome.Ptyxis/palettes/
+##   Helix       etc/skel/.config/helix/config.toml (Ao ships with Helix)
+##   Neovim      usr/share/nvim/site/colors/ao.vim
+##
+## All of these are defaults, not overrides: anything an account sets for
+## itself under ~/.config wins, so an existing account that already chose a
+## look keeps it. The /etc/skel parts only reach accounts created after the
+## image is in place.
+##
+## Three of them need a step once the packages are installed, which is why
+## they are here and not in section 1:
+##
+##   foot.ini belongs to the foot package and is a full commented template,
+##   so it pulls ao.ini in with an include= rather than being replaced, and
+##   foot's own --check-config proves the result parses.
+##   sysinit.vim belongs to neovim; the colorscheme line is appended to it.
+##   The Ptyxis override does nothing until the schemas are recompiled, and
+##   the gsettings check fails the build if the override did not take.
+
+# --- Ao colours: foot, Neovim and Ptyxis
+# --------------------------------------------------------------------------
+cp /etc/xdg/foot/foot.ini /etc/xdg/foot/foot.ini.bak
+sed -i '1a include=/etc/xdg/foot/ao.ini' /etc/xdg/foot/foot.ini
+foot -c /etc/xdg/foot/foot.ini --check-config
+test -f /usr/share/nvim/site/colors/ao.vim
+echo 'colorscheme ao' >> /usr/share/nvim/sysinit.vim
+glib-compile-schemas --strict /usr/share/glib-2.0/schemas
+test "$(GSETTINGS_BACKEND=memory gsettings get org.gnome.Ptyxis.Profile:/org/gnome/Ptyxis/Profiles/terrene/ palette)" = "'ao'"
+# --------------------------------------------------------------------------
+
+#############################################################################
 ## 10. Directories that must exist at boot
 #############################################################################
 ##

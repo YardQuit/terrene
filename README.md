@@ -3,6 +3,10 @@
 ## Purpose
 
 My personal daily drive utilizing the Fedora Cosmic container image (quay.io/fedora-ostree-desktops/cosmic-atomic:44) featuring the Cosmic Desktop. This setup includes development tools, including packages for Rust, C, Go, and Zig, as well as the Helix, Neovim, and Emacs editor for efficient writing. Furthermore, YubiKey authentication are enabled for sudo access, providing an additional layer of protection.
+## Colours
+
+The [Ao](https://github.com/YardQuit/ao) palette is the default look throughout: the COSMIC desktop (dark, with the ao-light theme for light mode), Emacs, Helix, Neovim and the kitty, Alacritty, foot and Ptyxis terminals. These are defaults only - anything set in your own `~/.config` takes precedence.
+
 ## Install
 
 ### bootc switch

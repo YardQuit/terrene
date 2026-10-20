@@ -1,0 +1,3 @@
+# Ao ships with Helix itself (runtime/themes/ao.toml), so naming it is all
+# it takes.
+theme = "ao"
