@@ -6,3 +6,4 @@ _build*/
 # build_files/cosign.pub, and is meant to be committed - the build installs it
 # so machines can verify the updates they pull.
 cosign.key
+*.patch
