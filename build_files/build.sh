@@ -950,12 +950,12 @@ systemctl enable sshd.service
 
 # --- SSH keys only, no root login: uncomment every line down to the next ruler
 # --------------------------------------------------------------------------
-# printf '%s\n' 'PermitRootLogin no' 'PasswordAuthentication no' 'KbdInteractiveAuthentication no' 'PubkeyAuthentication yes' > /etc/ssh/sshd_config.d/10-keys-only.conf
-# chmod 0600 /etc/ssh/sshd_config.d/10-keys-only.conf
-# SSH_TEST_KEY="$(mktemp -u)"
-# ssh-keygen -q -t ed25519 -N '' -f "${SSH_TEST_KEY}"
-# sshd -T -h "${SSH_TEST_KEY}" | grep -cxE 'permitrootlogin no|passwordauthentication no|kbdinteractiveauthentication no' | grep -qx 3
-# rm -f "${SSH_TEST_KEY}" "${SSH_TEST_KEY}.pub"
+printf '%s\n' 'PermitRootLogin no' 'PasswordAuthentication no' 'KbdInteractiveAuthentication no' 'PubkeyAuthentication yes' > /etc/ssh/sshd_config.d/10-keys-only.conf
+chmod 0600 /etc/ssh/sshd_config.d/10-keys-only.conf
+SSH_TEST_KEY="$(mktemp -u)"
+ssh-keygen -q -t ed25519 -N '' -f "${SSH_TEST_KEY}"
+sshd -T -h "${SSH_TEST_KEY}" | grep -cxE 'permitrootlogin no|passwordauthentication no|kbdinteractiveauthentication no' | grep -qx 3
+rm -f "${SSH_TEST_KEY}" "${SSH_TEST_KEY}.pub"
 # --------------------------------------------------------------------------
 
 ## Fingerprint login, following Framework's Fedora guide
