@@ -603,7 +603,7 @@ dnf -y install https://github.com/YardQuit/csvdt/releases/download/rpm-release/c
 # --- Tuatara, the newest RPM from its GitHub releases
 # --------------------------------------------------------------------------
 ## Not a fixed URL like CSVDT's, for two reasons. The file name carries the
-## version and a git date (tuatara-0.90-0.20261021gitda37aad.x86_64.rpm), so
+## version and a git date (tuatara-0.90.1-0.20261022gitebd21d5.x86_64.rpm), so
 ## it changes with every release. And GitHub's ".../releases/latest/download/"
 ## shortcut skips anything marked as a pre-release, which every Tuatara
 ## release so far has been, so it answers 404.
