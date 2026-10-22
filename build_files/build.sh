@@ -1055,23 +1055,38 @@ rm -f "${SSH_TEST_KEY}" "${SSH_TEST_KEY}.pub"
 ## "systemctl add-wants" does the same thing from the outside: it writes the
 ## multi-user.target.wants symlink in /etc without touching the vendor unit.
 ##
-## authselect then adds pam_fprintd to system-auth, which is what makes the
-## login screen and sudo offer the reader. The check after it fails the build
-## if the feature did not stick, rather than shipping an image that silently
-## asks for a password only. Fingerprints themselves are per-machine data in
-## /var/lib/fprint: enrol after installing, with fprintd-enroll.
+## authselect's with-fingerprint then adds pam_fprintd to system-auth - and
+## system-auth is shared by everything that authenticates, so stock it offers
+## the reader to sudo, polkit and run0 as much as to the login screen. The
+## reader is meant for logging in and unlocking only, so the image runs its
+## own authselect profile, custom/terrene: the stock "local" profile, copied
+## fresh on every build, with one line put in front of pam_fprintd that skips
+## it unless the PAM service is one of
 ##
-## sudo keeps the YubiKey line below in front of system-auth, so with both
-## enabled sudo asks for the key and then accepts a finger instead of the
-## password.
+##   greetd          the COSMIC login screen
+##   cosmic-greeter  the COSMIC lock screen
+##
+## Everything else - sudo, polkit, run0, a text console - goes straight to the
+## password. Add a service to the "service in" list to offer it the reader too.
+## The features the base already had selected are carried over, and the
+## checks fail the build if the profile, the feature or the guard line did
+## not take, rather than shipping an image that silently offers the finger
+## everywhere again, or nowhere. Fingerprints themselves are per-machine data
+## in /var/lib/fprint: enrol after installing, with fprintd-enroll.
+##
+## With the YubiKey line below, sudo asks for the key and then the password.
 
 # --- Fingerprint reader: uncomment every line down to the next ruler
 # --------------------------------------------------------------------------
 pkg_install fprintd fprintd-pam
 systemctl add-wants multi-user.target fprintd.service
-authselect enable-feature with-fingerprint
-authselect apply-changes
+authselect create-profile terrene --base-on=local
+sed -i 's/^auth \+sufficient \+pam_fprintd\.so .*$/auth        [success=ignore default=1]                   pam_succeed_if.so service in greetd:cosmic-greeter quiet {include if "with-fingerprint"}\n&/' /etc/authselect/custom/terrene/system-auth
+grep -q 'service in greetd:cosmic-greeter' /etc/authselect/custom/terrene/system-auth
+read -ra AUTHSELECT_CURRENT <<<"$(authselect current --raw)"
+authselect select custom/terrene "${AUTHSELECT_CURRENT[@]:1}" with-fingerprint
 authselect current | grep -qx -- '- with-fingerprint'
+grep -A1 -x 'auth .*pam_succeed_if\.so service in greetd:cosmic-greeter quiet' /etc/pam.d/system-auth | grep -q pam_fprintd.so
 # --------------------------------------------------------------------------
 
 # --- Tailscale: uncomment every line down to the next ruler

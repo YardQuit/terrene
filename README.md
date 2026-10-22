@@ -9,7 +9,7 @@ The [Ao](https://github.com/YardQuit/ao) palette is the default look throughout:
 
 ## Framework Laptop 13
 
-Set up for the Framework Laptop 13 by default: fingerprint login, power profiles in the COSMIC battery applet, firmware updates from the LVFS, and staying awake with the lid closed while docked or on mains power. If the installer ran in basic graphics mode and left `nomodeset` on the kernel command line, the first boot removes it and the next reboot comes up on the real graphics driver. A battery charge limit at 80% is in `build_files/build.sh`, switched off.
+Set up for the Framework Laptop 13 by default: fingerprint login and unlock at the COSMIC login and lock screens (sudo still takes the YubiKey and your password), power profiles in the COSMIC battery applet, firmware updates from the LVFS, and staying awake with the lid closed while docked or on mains power. If the installer ran in basic graphics mode and left `nomodeset` on the kernel command line, the first boot removes it and the next reboot comes up on the real graphics driver. A battery charge limit at 80% is in `build_files/build.sh`, switched off.
 
 ## Install
 
