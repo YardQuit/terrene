@@ -1,6 +1,7 @@
 # Make Ao the palette of every Ptyxis profile that has not picked one.
 # The palette itself is a user palette - Ptyxis only looks for those in
-# ~/.local/share/org.gnome.Ptyxis/palettes/ - and is seeded there through
-# /etc/skel. build.sh recompiles the schemas after section 1 copies this in.
+# ~/.local/share/org.gnome.Ptyxis/palettes/ - and is linked in there from
+# /usr/share/terrene/ptyxis/ by usr/share/user-tmpfiles.d/10-terrene-defaults.conf.
+# build.sh recompiles the schemas after section 1 copies this in.
 [org.gnome.Ptyxis.Profile]
 palette='ao'

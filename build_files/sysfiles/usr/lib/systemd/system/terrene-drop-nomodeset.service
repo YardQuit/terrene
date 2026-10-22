@@ -1,0 +1,31 @@
+# Take "nomodeset" off the kernel command line after installation.
+#
+# Booting the installer in basic graphics mode - which a new GPU the
+# installer's kernel does not know yet can force - adds nomodeset to the
+# installer's command line, and Anaconda copies it onto the installed system.
+# There it keeps the real graphics driver from loading: no acceleration, no
+# brightness control, no external screens and a much hungrier laptop. The
+# image's own kernel arguments (usr/lib/bootc/kargs.d/) do not carry it; it
+# belongs to the machine, so it has to be removed on the machine.
+#
+# The unit only starts on a boot that has nomodeset. rpm-ostree writes the
+# change into a new deployment of the image already booted, and the next
+# reboot runs without it; bootc upgrades carry that edited command line
+# forward. It runs before the update timer can stage anything, so it does not
+# replace a staged update.
+#
+# A machine that really does need nomodeset keeps it with
+#   sudo systemctl mask terrene-drop-nomodeset.service
+# before adding it back with "sudo rpm-ostree kargs --append=nomodeset".
+[Unit]
+Description=Remove the nomodeset kernel argument left by the installer
+Documentation=man:rpm-ostree(1)
+ConditionKernelCommandLine=nomodeset
+Before=bootc-fetch-apply-updates.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/rpm-ostree kargs --delete-if-present=nomodeset
+
+[Install]
+WantedBy=multi-user.target

@@ -1133,6 +1133,62 @@ chmod 0644 /etc/xdg/autostart/trayscale.desktop
 
 # systemctl --global enable some-user-unit.service   # for every user session
 
+## Per-account defaults. build_files/sysfiles/usr/share/user-tmpfiles.d/10-terrene-defaults.conf
+## links the Ao palette into each account's Ptyxis palettes directory (section
+## 9d) and marks COSMIC Initial Setup as done, so the first login after the
+## installer goes straight to the desktop instead of asking the same questions
+## again. The systemd user manager applies those rules at every login through
+## this unit, which Fedora's presets already enable; said out loud for the same
+## reason tuned and firewalld are above.
+systemctl --global enable systemd-tmpfiles-setup.service
+
+## Framework Laptop 13. The rest of what the laptop needs is in place already:
+## the fingerprint reader above, the lid switch in
+## build_files/sysfiles/usr/lib/systemd/logind.conf.d/10-lid-docked.conf, and
+## the kernel, Mesa and firmware the base ships. These cover what is left.
+##
+## nomodeset. Boot the installer in basic graphics mode and Anaconda copies
+## nomodeset onto the installed system's kernel command line, where it keeps
+## the graphics driver from ever loading: no acceleration, no brightness keys,
+## no external screens, and a battery that drains far faster. The unit shipped
+## at build_files/sysfiles/usr/lib/systemd/system/terrene-drop-nomodeset.service
+## takes it off again on the first boot that has it, and the reboot after that
+## comes up on the real driver. It does nothing on a boot without nomodeset.
+## It does the work with rpm-ostree, so check that is there rather than ship
+## a unit that fails on every boot.
+test -x /usr/bin/rpm-ostree
+systemctl enable terrene-drop-nomodeset.service
+
+## Power profiles and firmware. tuned-ppd answers on power-profiles-daemon's
+## D-Bus interface on top of tuned, which is what lets the COSMIC battery
+## applet switch between power saver, balanced and performance - without it
+## tuned runs but the applet has nothing to talk to. Framework publishes BIOS,
+## EC and fingerprint-reader firmware through the LVFS; fwupd-refresh.timer,
+## which fwupd ships disabled, keeps the metadata fresh so "fwupdmgr update"
+## and the COSMIC Store see a new release without a manual refresh first.
+
+# --- Framework laptop: power profiles and firmware updates
+# --------------------------------------------------------------------------
+pkg_install tuned-ppd fwupd
+systemctl enable tuned-ppd.service
+systemctl enable fwupd-refresh.timer
+# --------------------------------------------------------------------------
+
+## A charge limit. Framework's embedded controller can stop charging at a set
+## level, which is kinder to a battery that spends most of its life on the
+## charger. Kernels from 6.12 on expose it as charge_control_end_threshold on
+## the battery; this udev rule sets 80% each time the battery appears, and the
+## TEST= keeps it a no-op on a machine whose battery has no such attribute.
+## Off by default: a laptop that stops at 80% looks broken to anyone who did
+## not choose it. Change the 80 to taste.
+
+# --- Battery charge limit at 80%: uncomment every line down to the next ruler
+# --------------------------------------------------------------------------
+# printf '%s\n' 'ACTION=="add|change", SUBSYSTEM=="power_supply", KERNEL=="BAT*", TEST=="charge_control_end_threshold", ATTR{charge_control_end_threshold}="80"' > /usr/lib/udev/rules.d/90-charge-limit.rules
+# chmod 0644 /usr/lib/udev/rules.d/90-charge-limit.rules
+# udevadm verify /usr/lib/udev/rules.d/90-charge-limit.rules
+# --------------------------------------------------------------------------
+
 
 #############################################################################
 ## 9. Optional: tweak configuration
@@ -1596,14 +1652,18 @@ if rules[0].get("keyPath") != key or not os.path.exists(key):
 ##   Alacritty   etc/alacritty/alacritty.toml
 ##   foot        etc/xdg/foot/ao.ini
 ##   Ptyxis      usr/share/glib-2.0/schemas/90_terrene-ao.gschema.override, and
-##               the palette in etc/skel/.local/share/org.gnome.Ptyxis/palettes/
+##               the palette in usr/share/terrene/ptyxis/ - dark, and ao-light
+##               for a light desktop - linked into every account by
+##               usr/share/user-tmpfiles.d/10-terrene-defaults.conf
 ##   Helix       etc/skel/.config/helix/config.toml (Ao ships with Helix)
 ##   Neovim      usr/share/nvim/site/colors/ao.vim
 ##
 ## All of these are defaults, not overrides: anything an account sets for
 ## itself under ~/.config wins, so an existing account that already chose a
 ## look keeps it. The /etc/skel parts only reach accounts created after the
-## image is in place.
+## image is in place; the Ptyxis palette reaches every account at its next
+## login, because Ptyxis looks for palettes in the account's home and nowhere
+## else, and a user tmpfiles.d rule is the one thing that can put it there.
 ##
 ## Three of them need a step once the packages are installed, which is why
 ## they are here and not in section 1:
@@ -1622,6 +1682,7 @@ sed -i '1a include=/etc/xdg/foot/ao.ini' /etc/xdg/foot/foot.ini
 foot -c /etc/xdg/foot/foot.ini --check-config
 test -f /usr/share/nvim/site/colors/ao.vim
 echo 'colorscheme ao' >> /usr/share/nvim/sysinit.vim
+test -f /usr/share/terrene/ptyxis/ao.palette
 glib-compile-schemas --strict /usr/share/glib-2.0/schemas
 test "$(GSETTINGS_BACKEND=memory gsettings get org.gnome.Ptyxis.Profile:/org/gnome/Ptyxis/Profiles/terrene/ palette)" = "'ao'"
 # --------------------------------------------------------------------------

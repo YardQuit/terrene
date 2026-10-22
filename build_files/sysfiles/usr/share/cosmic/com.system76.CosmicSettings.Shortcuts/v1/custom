@@ -1,0 +1,30 @@
+{
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "b",
+        description: Some("Browser"),
+    ): Spawn("chromium-browser"),
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "t",
+        description: Some("Terminal"),
+    ): Spawn("kitty"),
+    (
+        modifiers: [
+            Super,
+        ],
+        key: "v",
+        description: Some("Tuatara"),
+    ): Spawn("tuatara --gui"),
+    (
+        modifiers: [
+            Ctrl,
+        ],
+        key: "t",
+        description: Some("Terminal"),
+    ): Spawn("kitty"),
+}

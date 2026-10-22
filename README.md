@@ -7,6 +7,10 @@ My personal daily drive utilizing the Fedora Cosmic container image (quay.io/fed
 
 The [Ao](https://github.com/YardQuit/ao) palette is the default look throughout: the COSMIC desktop (dark, with the ao-light theme for light mode), Emacs, Helix, Neovim and the kitty, Alacritty, foot and Ptyxis terminals. These are defaults only - anything set in your own `~/.config` takes precedence.
 
+## Framework Laptop 13
+
+Set up for the Framework Laptop 13 by default: fingerprint login, power profiles in the COSMIC battery applet, firmware updates from the LVFS, and staying awake with the lid closed while docked or on mains power. If the installer ran in basic graphics mode and left `nomodeset` on the kernel command line, the first boot removes it and the next reboot comes up on the real graphics driver. A battery charge limit at 80% is in `build_files/build.sh`, switched off.
+
 ## Install
 
 ### bootc switch
