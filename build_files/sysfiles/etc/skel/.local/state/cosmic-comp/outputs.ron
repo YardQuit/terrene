@@ -1,0 +1,62 @@
+// Starting display layouts for new accounts: the Framework Laptop 13 screen
+// and the Samsung LC49G95T at its native 5120x1440 at 120 Hz.
+//
+// COSMIC keeps one layout per set of connected screens, so the Samsung on its
+// own (lid closed) and the Samsung beside the laptop screen (lid open) are
+// listed separately. The login screen uses the same layouts. COSMIC rewrites
+// this file whenever the displays change, so it is only a starting point.
+(
+    config: {
+        [
+            (
+                connector: "DP-1",
+                make: "Samsung Electric Company",
+                model: "LC49G95T",
+            ),
+        ]: [
+            (
+                mode: ((5120, 1440), Some(119999)),
+                vrr: r#false,
+                scale: 1.0,
+                transform: Normal,
+                position: (0, 0),
+                enabled: r#true,
+                max_bpc: Some(12),
+                xwayland_primary: false,
+            ),
+        ],
+        [
+            (
+                connector: "DP-1",
+                make: "Samsung Electric Company",
+                model: "LC49G95T",
+            ),
+            (
+                connector: "eDP-1",
+                make: "China Star Optoelectronics Technology Co., Ltd",
+                model: "MND508ZB1-1",
+            ),
+        ]: [
+            (
+                mode: ((5120, 1440), Some(119999)),
+                vrr: r#false,
+                scale: 1.0,
+                transform: Normal,
+                position: (1440, 0),
+                enabled: r#true,
+                max_bpc: Some(12),
+                xwayland_primary: false,
+            ),
+            (
+                mode: ((2880, 1920), Some(120000)),
+                vrr: r#true,
+                scale: 2.0,
+                transform: Normal,
+                position: (0, 0),
+                enabled: r#true,
+                max_bpc: Some(12),
+                xwayland_primary: false,
+            ),
+        ],
+    },
+)
