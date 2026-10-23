@@ -9,7 +9,9 @@ The [Ao](https://github.com/YardQuit/ao) palette is the default look throughout:
 
 ## Framework Laptop 13
 
-Set up for the Framework Laptop 13 by default: fingerprint login and unlock at the COSMIC login and lock screens (sudo still takes the YubiKey and your password), power profiles in the COSMIC battery applet, firmware updates from the LVFS, and staying awake with the lid closed while docked or on mains power. If the installer ran in basic graphics mode and left `nomodeset` on the kernel command line, the first boot removes it and the next reboot comes up on the real graphics driver. A battery charge limit at 80% is in `build_files/build.sh`, switched off.
+Set up for the Framework Laptop 13 by default: fingerprint login and unlock at the COSMIC login and lock screens (sudo still takes the YubiKey and your password), power profiles in the COSMIC battery applet, firmware updates from the LVFS, and staying awake with the lid closed while docked or on mains power. Docked with the lid closed, a keypress on the USB keyboard (Kinesis Advantage360 Pro) or a click on the trackball (Kensington Expert Wireless) wakes it from suspend; the rule is `/usr/lib/udev/rules.d/90-terrene-usb-wakeup.rules`, and it also lets plugging or unplugging something on the dock wake it. If the installer ran in basic graphics mode and left `nomodeset` on the kernel command line, the first boot removes it and the next reboot comes up on the real graphics driver. A battery charge limit at 80% is in `build_files/build.sh`, switched off.
+
+COSMIC keeps one display layout per set of connected screens, in `~/.local/state/cosmic-comp/outputs.ron`. If the external monitor comes back at a lower resolution after the lid has been opened and closed again while docked, open the lid once, set the monitor to its native mode in Settings → Displays (5120×1440 at 120 Hz for the Samsung LC49G95T), and COSMIC remembers it for that layout. Don't edit `outputs.ron` by hand while COSMIC is running - it gets overwritten.
 
 ## Install
 

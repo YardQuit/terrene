@@ -1,0 +1,32 @@
+# Wake from suspend with the USB keyboard and trackball.
+#
+# Docked with the lid closed, the laptop otherwise only wakes when the lid is
+# opened. USB remote wakeup is off by default, and for a keypress to wake the
+# system every link in the chain has to allow it: the device itself, every hub
+# in between - the dock's included - and the xHCI root hub. So it is switched
+# on for all USB hubs and for the two input devices below.
+#
+# With wakeup on for the hubs, plugging or unplugging something on the dock
+# may wake the system too.
+#
+# Find another device's IDs, and check the wakeup state along its path, with:
+#   for d in /sys/bus/usb/devices/*/; do
+#       [ -f "$d/product" ] && echo "$(basename $d) $(cat $d/idVendor):$(cat $d/idProduct) $(cat $d/product) wakeup=$(cat $d/power/wakeup 2>/dev/null)"
+#   done
+# A path like 3-5.4.3.4 is device 4 on hub 3-5.4.3, behind hubs 3-5.4 and 3-5,
+# on root hub usb3; each of those should show wakeup=enabled.
+#
+# Add devices, or turn this off, per machine with a file of the same name in
+# /etc/udev/rules.d/, which takes its place. Apply a change without
+# rebooting with:
+#   sudo udevadm control --reload
+#   sudo udevadm trigger --subsystem-match=usb --action=add
+
+# All USB hubs, including dock hubs and the xHCI root hubs
+ACTION=="add", SUBSYSTEM=="usb", DRIVER=="usb", ATTR{bDeviceClass}=="09", ATTR{power/wakeup}="enabled"
+
+# Kinesis Advantage360 Pro keyboard
+ACTION=="add", SUBSYSTEM=="usb", DRIVER=="usb", ATTR{idVendor}=="29ea", ATTR{idProduct}=="0362", ATTR{power/wakeup}="enabled"
+
+# Kensington Expert Wireless trackball
+ACTION=="add", SUBSYSTEM=="usb", DRIVER=="usb", ATTR{idVendor}=="047d", ATTR{idProduct}=="8018", ATTR{power/wakeup}="enabled"
