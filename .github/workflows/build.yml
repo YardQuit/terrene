@@ -228,6 +228,25 @@ jobs:
             --label "containers.bootc=1"
           )
 
+          # Pull the base image up front, with retries. quay.io answers some
+          # blob requests from the runners with 503 Service Unavailable, a
+          # different blob each time, and podman build gives up on the first
+          # one. Once the image is local, the build uses it as it is (the
+          # default --pull=missing) instead of fetching it again. The name is
+          # read from the Containerfile so it is only written down once.
+          BASE_IMAGE="$(awk '$1 == "FROM" && $2 != "scratch" { image = $2 } END { print image }' Containerfile)"
+          for attempt in 1 2 3 4 5; do
+            if podman pull "${BASE_IMAGE}"; then
+              break
+            fi
+            if [ "${attempt}" -eq 5 ]; then
+              echo "Could not pull ${BASE_IMAGE} after ${attempt} attempts" >&2
+              exit 1
+            fi
+            echo "Pull of ${BASE_IMAGE} failed, retrying in $((attempt * 30))s" >&2
+            sleep $((attempt * 30))
+          done
+
           # --format docker keeps compatibility with tools that don't read OCI.
           #
           # IMAGE_REPO tells build.sh which repository this image will actually
