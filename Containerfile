@@ -18,19 +18,19 @@ COPY build_files /
 ## Fedora Atomic Desktops - a full desktop, and what this template is written
 ## around. Same base, different session:
 ##
-##   quay.io/fedora-ostree-desktops/silverblue:44        GNOME  (the default)
-##   quay.io/fedora-ostree-desktops/kinoite:44           KDE Plasma
-##   quay.io/fedora-ostree-desktops/cosmic-atomic:44     COSMIC
-##   quay.io/fedora-ostree-desktops/sway-atomic:44       Sway
-##   quay.io/fedora-ostree-desktops/xfce-atomic:44       Xfce
-##   quay.io/fedora-ostree-desktops/budgie-atomic:44     Budgie
-##   quay.io/fedora-ostree-desktops/lxqt-atomic:44       LXQt
-##   quay.io/fedora-ostree-desktops/base-atomic:44       no desktop session
+##   quay.io/fedora-ostree-desktops/silverblue:45        GNOME  (the default)
+##   quay.io/fedora-ostree-desktops/kinoite:45           KDE Plasma
+##   quay.io/fedora-ostree-desktops/cosmic-atomic:45     COSMIC
+##   quay.io/fedora-ostree-desktops/sway-atomic:45       Sway
+##   quay.io/fedora-ostree-desktops/xfce-atomic:45       Xfce
+##   quay.io/fedora-ostree-desktops/budgie-atomic:45     Budgie
+##   quay.io/fedora-ostree-desktops/lxqt-atomic:44       LXQt  (no Fedora 45 build yet)
+##   quay.io/fedora-ostree-desktops/base-atomic:45       no desktop session
 ##
 ## Server and minimal bases - no desktop at all, so a desktop image built on one
 ## of these is yours to assemble:
 ##
-##   quay.io/fedora/fedora-bootc:44                      Fedora
+##   quay.io/fedora/fedora-bootc:45                      Fedora
 ##   quay.io/centos-bootc/centos-bootc:stream10          CentOS Stream
 ##   quay.io/almalinuxorg/almalinux-bootc:10             AlmaLinux
 ##   quay.io/hummingbird-community/bootc-os:latest       Project Hummingbird
@@ -69,7 +69,7 @@ COPY build_files /
 ## from it". AlmaLinux and Rocky are the RHEL-compatible route with none of
 ## that: free to pull, free to publish.
 
-FROM quay.io/fedora-ostree-desktops/cosmic-atomic:44
+FROM quay.io/fedora-ostree-desktops/cosmic-atomic:45
 
 ## The repository this image gets published to, passed in by the workflow.
 ## build.sh section 9c checks the scope of the signature policy it writes

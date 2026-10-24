@@ -328,7 +328,7 @@ if [ -L /opt ]; then
     mkdir /opt
 fi
 
-dnf -y install https://mega.nz/linux/repo/Fedora_44/x86_64/megasync-Fedora_44.x86_64.rpm \
+dnf -y install https://mega.nz/linux/repo/Fedora_45/x86_64/megasync-Fedora_45.x86_64.rpm \
     || echo "megasync: dnf exited non-zero (expected) - verifying"
 rpm -q megasync
 
@@ -362,7 +362,7 @@ chmod 0644 /etc/xdg/autostart/megasync.desktop
 
 # --- MEGAcmd, the command line client, instead of or as well as the above
 # --------------------------------------------------------------------------
-# dnf -y install https://mega.nz/linux/repo/Fedora_44/x86_64/megacmd-Fedora_44.x86_64.rpm
+# dnf -y install https://mega.nz/linux/repo/Fedora_45/x86_64/megacmd-Fedora_45.x86_64.rpm
 # --------------------------------------------------------------------------
 
 ## Note that MEGAsync is a Qt5 application. On a GNOME or COSMIC image the Qt5
