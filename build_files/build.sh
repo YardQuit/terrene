@@ -611,6 +611,9 @@ dnf -y install https://github.com/YardQuit/csvdt/releases/download/rpm-release/c
 ## The newest tag comes from the releases Atom feed instead. That feed lists
 ## pre-releases too, newest first. It is a plain page rather than the API, so
 ## the 60-an-hour limit that section 6's texlab notes describe does not apply.
+## It also lists a tag whose release is still a draft, and a draft's files
+## answer 404 until it is published, so the build takes the newest tag whose
+## SHA256SUMS can actually be downloaded.
 ## Each release also ships a SHA256SUMS file under that fixed name. That file
 ## gives the RPM's real name and its hash, so the build checks the download
 ## before dnf sees it. All of it comes from the same GitHub release, so it
@@ -624,14 +627,22 @@ dnf -y install https://github.com/YardQuit/csvdt/releases/download/rpm-release/c
 [ "$(uname -m)" = "x86_64" ] || { echo "Tuatara: no published RPM for $(uname -m)" >&2; exit 1; }
 
 TUATARA_RELEASES="https://github.com/Tuatara-Editor/tuatara/releases"
-TUATARA_TAG="$(curl -fsSL --retry 3 --retry-all-errors --connect-timeout 15 \
+TUATARA_TAGS="$(curl -fsSL --retry 3 --retry-all-errors --connect-timeout 15 \
     "${TUATARA_RELEASES}.atom" \
-    | sed -nE 's#.*/releases/tag/([^"]+)".*#\1#p' | sed -n 1p)"
-[ -n "${TUATARA_TAG}" ] || { echo "Tuatara: no release found in ${TUATARA_RELEASES}.atom" >&2; exit 1; }
+    | sed -nE 's#.*/releases/tag/([^"]+)".*#\1#p')"
+[ -n "${TUATARA_TAGS}" ] || { echo "Tuatara: no release found in ${TUATARA_RELEASES}.atom" >&2; exit 1; }
 
 TUATARA_TMP="$(mktemp -d)"
-curl -fL --retry 3 --retry-all-errors --connect-timeout 15 \
-    -o "${TUATARA_TMP}/SHA256SUMS" "${TUATARA_RELEASES}/download/${TUATARA_TAG}/SHA256SUMS"
+TUATARA_TAG=""
+for tag in ${TUATARA_TAGS}; do
+    if curl -fsSL --retry 3 --connect-timeout 15 \
+        -o "${TUATARA_TMP}/SHA256SUMS" "${TUATARA_RELEASES}/download/${tag}/SHA256SUMS"; then
+        TUATARA_TAG="${tag}"
+        break
+    fi
+    echo "Tuatara: release ${tag} has no downloadable SHA256SUMS (a draft?), trying the next" >&2
+done
+[ -n "${TUATARA_TAG}" ] || { echo "Tuatara: no published release in ${TUATARA_RELEASES}.atom" >&2; exit 1; }
 TUATARA_RPM="$(awk '$2 ~ /\.x86_64\.rpm$/ {print $2; exit}' "${TUATARA_TMP}/SHA256SUMS")"
 [ -n "${TUATARA_RPM}" ] || { echo "Tuatara: no x86_64 RPM listed in release ${TUATARA_TAG}" >&2; exit 1; }
 
