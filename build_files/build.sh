@@ -1033,7 +1033,8 @@ systemctl enable sshd.service
 ## order, so the 10- prefix puts these ahead of the base's 50-redhat.conf. The
 ## last lines ask sshd for the settings it would actually run with, using a
 ## throwaway host key because the real ones are only made on first boot, and
-## fail the build if any of the three did not take.
+## fail the build if any of the three did not take. The match ignores case:
+## OpenSSH 10.5 prints the names capitalised, earlier versions in lower case.
 
 # --- SSH keys only, no root login: uncomment every line down to the next ruler
 # --------------------------------------------------------------------------
@@ -1041,7 +1042,7 @@ printf '%s\n' 'PermitRootLogin no' 'PasswordAuthentication no' 'KbdInteractiveAu
 chmod 0600 /etc/ssh/sshd_config.d/10-keys-only.conf
 SSH_TEST_KEY="$(mktemp -u)"
 ssh-keygen -q -t ed25519 -N '' -f "${SSH_TEST_KEY}"
-sshd -T -h "${SSH_TEST_KEY}" | grep -cxE 'permitrootlogin no|passwordauthentication no|kbdinteractiveauthentication no' | grep -qx 3
+sshd -T -h "${SSH_TEST_KEY}" | grep -cixE 'permitrootlogin no|passwordauthentication no|kbdinteractiveauthentication no' | grep -qx 3
 rm -f "${SSH_TEST_KEY}" "${SSH_TEST_KEY}.pub"
 # --------------------------------------------------------------------------
 
