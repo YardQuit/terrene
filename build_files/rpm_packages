@@ -108,7 +108,6 @@ openblas-devel
 osbuild
 osbuild-selinux
 packit
-pam_yubico
 pandoc
 pass
 perl-sigtrap

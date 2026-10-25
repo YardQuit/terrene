@@ -1,0 +1,8 @@
+#!/bin/bash
+# terrene-lid-closed: exit status 0 when the laptop lid is closed, 1 otherwise.
+#
+# Used by the PAM stack (system-auth) to skip the fingerprint reader, which
+# sits under the lid, while the lid is closed. Machines without a lid switch
+# have no /proc/acpi/button/lid entry and always count as open.
+
+grep -qs closed /proc/acpi/button/lid/*/state
