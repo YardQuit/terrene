@@ -1045,7 +1045,8 @@ sshd -T -h "${SSH_TEST_KEY}" | grep -cxE 'permitrootlogin no|passwordauthenticat
 rm -f "${SSH_TEST_KEY}" "${SSH_TEST_KEY}.pub"
 # --------------------------------------------------------------------------
 
-## Fingerprint login, following Framework's Fedora guide
+## Signing in: a YubiKey touch, a finger or the password. Fingerprint setup
+## follows Framework's Fedora guide
 ## (framework.kustomer.help/fedora-fingerprint-troubleshooting-SyfIAyCM3).
 ##
 ## fprintd ships as a static, D-Bus-activated unit with no [Install] section,
@@ -1055,38 +1056,47 @@ rm -f "${SSH_TEST_KEY}" "${SSH_TEST_KEY}.pub"
 ## "systemctl add-wants" does the same thing from the outside: it writes the
 ## multi-user.target.wants symlink in /etc without touching the vendor unit.
 ##
-## authselect's with-fingerprint then adds pam_fprintd to system-auth - and
-## system-auth is shared by everything that authenticates, so stock it offers
-## the reader to sudo, polkit and run0 as much as to the login screen. The
-## reader is meant for logging in and unlocking only, so the image runs its
-## own authselect profile, custom/terrene: the stock "local" profile, copied
-## fresh on every build, with one line put in front of pam_fprintd that skips
-## it unless the PAM service is one of
+## Everything that authenticates - the COSMIC login screen (greetd) and lock
+## screen (cosmic-greeter), sudo, polkit's password dialogs, run0, a text
+## console - goes through system-auth. authselect's with-fingerprint and
+## with-pam-u2f put pam_fprintd and pam_u2f there, finger first. The image runs
+## its own authselect profile, custom/terrene: the stock "local" profile,
+## copied fresh on every build, with those two lines replaced by three, so
+## each of those asks in this order and the first one that succeeds signs in:
 ##
-##   greetd          the COSMIC login screen
-##   cosmic-greeter  the COSMIC lock screen
+##   1. the YubiKey: one touch, no PIN (pam_u2f; "cue" prints a reminder)
+##   2. the finger, skipped while the lid is closed: the reader sits under
+##      it, and /usr/libexec/terrene-lid-closed tells PAM so
+##   3. the password
 ##
-## Everything else - sudo, polkit, run0, a text console - goes straight to the
-## password. Add a service to the "service in" list to offer it the reader too.
-## The features the base already had selected are carried over, and the
-## checks fail the build if the profile, the feature or the guard line did
-## not take, rather than shipping an image that silently offers the finger
-## everywhere again, or nowhere. Fingerprints themselves are per-machine data
-## in /var/lib/fprint: enrol after installing, with fprintd-enroll.
+## Keys are registered per user in ~/.config/Yubico/u2f_keys with the origin
+## pam://terrene, the same on every machine running the image, rather than
+## pam_u2f's default of the hostname: see the README. An account without keys
+## goes on to the finger and the password ("nouserok"). Fingerprints are
+## per-machine data in /var/lib/fprint: enrol after installing, with
+## fprintd-enroll or COSMIC's settings.
 ##
-## With the YubiKey line below, sudo asks for the key and then the password.
+## The features the base already had selected are carried over, and the checks
+## fail the build if the profile, the features or the three lines did not take,
+## rather than shipping an image that signs in some other way than this.
 
-# --- Fingerprint reader: uncomment every line down to the next ruler
+# --- Signing in: uncomment every line down to the next ruler
 # --------------------------------------------------------------------------
-pkg_install fprintd fprintd-pam
+pkg_install fprintd fprintd-pam pam-u2f pamu2fcfg
+test -x /usr/libexec/terrene-lid-closed
 systemctl add-wants multi-user.target fprintd.service
 authselect create-profile terrene --base-on=local
-sed -i 's/^auth \+sufficient \+pam_fprintd\.so .*$/auth        [success=ignore default=1]                   pam_succeed_if.so service in greetd:cosmic-greeter quiet {include if "with-fingerprint"}\n&/' /etc/authselect/custom/terrene/system-auth
-grep -q 'service in greetd:cosmic-greeter' /etc/authselect/custom/terrene/system-auth
+sed -i \
+    -e '/^auth \+sufficient \+pam_u2f\.so cue \+{include if "with-pam-u2f"}/d' \
+    -e 's|^auth \+sufficient \+pam_fprintd\.so .*$|auth        sufficient                                   pam_u2f.so cue nouserok origin=pam://terrene appid=pam://terrene {include if "with-pam-u2f"}\nauth        [success=1 default=ignore]                   pam_exec.so quiet /usr/libexec/terrene-lid-closed {include if "with-fingerprint"}\n&|' \
+    /etc/authselect/custom/terrene/system-auth
 read -ra AUTHSELECT_CURRENT <<<"$(authselect current --raw)"
-authselect select custom/terrene "${AUTHSELECT_CURRENT[@]:1}" with-fingerprint
+authselect select custom/terrene "${AUTHSELECT_CURRENT[@]:1}" with-fingerprint with-pam-u2f
 authselect current | grep -qx -- '- with-fingerprint'
-grep -A1 -x 'auth .*pam_succeed_if\.so service in greetd:cosmic-greeter quiet' /etc/pam.d/system-auth | grep -q pam_fprintd.so
+authselect current | grep -qx -- '- with-pam-u2f'
+grep -oE 'pam_(u2f|exec|fprintd)\.so' /etc/pam.d/system-auth | paste -sd' ' \
+    | grep -qx 'pam_u2f.so pam_exec.so pam_fprintd.so'
+grep -q 'pam_u2f.so cue nouserok origin=pam://terrene appid=pam://terrene$' /etc/pam.d/system-auth
 # --------------------------------------------------------------------------
 
 # --- Tailscale: uncomment every line down to the next ruler
@@ -1233,26 +1243,6 @@ fi
 firewall-offline-cmd --get-default-zone | grep -qx drop
 # --------------------------------------------------------------------------
 firewall-offline-cmd --zone=drop --add-service=ssh
-
-## Example: require a YubiKey for sudo (pam_yubico is in rpm_packages already).
-##
-## PAM treats a missing "required" module as an authentication failure, so if
-## pam_yubico.so is not actually in the image this line makes sudo impossible for
-## every user - and "bootc container lint" will not catch it. Check the module is
-## there and fail the build rather than shipping a system nobody can administer.
-##
-## You must also enrol a key (ykpamcfg -2) before booting the image, or sudo will
-## reject you; /etc/pam.d/sudo.bak is left behind for recovery.
-
-# --- YubiKey for sudo: uncomment every line down to the next ruler
-# --------------------------------------------------------------------------
-if ! find /usr/lib64/security /usr/lib/security -name pam_yubico.so -print -quit 2>/dev/null | grep -q .; then
-    echo "ERROR: pam_yubico.so not found - refusing to edit /etc/pam.d/sudo." >&2
-    exit 1
-fi
-cp /etc/pam.d/sudo /etc/pam.d/sudo.bak
-sed -i '/PAM-1.0/a\auth       required     pam_yubico.so mode=challenge-response' /etc/pam.d/sudo
-# --------------------------------------------------------------------------
 
 
 #############################################################################
