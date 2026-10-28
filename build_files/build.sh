@@ -136,7 +136,7 @@ skel_fetch YardQuit/garamond "${GARAMOND_COMMIT}" garamond.el       "${GARAMOND_
 ## The trade-off: /opt is then read-only on the running system, so you can no
 ## longer drop files into /opt by hand.
 ##
-## The 1Password and MEGAsync blocks below carry their own copy of these four
+## The 1Password and MEGA blocks below carry their own copy of these four
 ## lines, so enabling one of those needs nothing from here. Uncomment it here
 ## when you install some other package that lives in /opt.
 
@@ -289,37 +289,41 @@ chmod 0644 /etc/xdg/autostart/1password.desktop
 
 
 #############################################################################
-## 2b. Example of such a package: MEGAsync (Fedora)
+## 2b. Example of such a package: MEGAcmd or MEGAsync (Fedora)
 #############################################################################
 ##
-## Ready to use: uncomment every line between the rulers below, and nothing
-## else in this file has to change. The command-line client further down has
-## rulers of its own.
+## Ready to use: uncomment every line between the rulers of the one you want,
+## and nothing else in this file has to change. MEGAcmd is the command line
+## client, MEGAsync the desktop tray client; the two blocks are independent.
 ##
 ## Same idea as 1Password, with one wrinkle: the download URL names the Fedora
 ## release, so it has to be kept in step with the FROM line in the Containerfile.
 ## There is no build for a Fedora release until MEGA publishes one, and the
 ## build fails loudly if you point at one that does not exist yet.
 ##
-## MEGAsync puts its bundled ffmpeg libraries in /opt/megasync/lib, so it needs
-## section 2's /opt fix - the block below opens with it. Without that, the
-## application installs but its libraries disappear on the first upgrade, which
-## looks like a broken app rather than a missing one.
+## Both put their bundled ffmpeg libraries in /opt (/opt/megacmd/lib and
+## /opt/megasync/lib), so they need section 2's /opt fix - each block opens with
+## it. Without that, the application installs but its libraries disappear on the
+## first upgrade, which looks like a broken app rather than a missing one.
 ##
-## MEGAsync's %post scriptlet cannot succeed inside an image build, and neither
-## of the two things it does is wanted here. It moves /var/lib/rpm/.rpm.lock
-## aside to run a nested "rpm --import" for MEGA's key - ostree bases keep the
-## rpm database in /usr/share/rpm and have no /var/lib/rpm at all, so the lock is
-## not where it looks and the import fails. It then calls sysctl to raise
-## fs.inotify.max_user_watches, which is denied in an unprivileged build.
+## The %post scriptlet of both packages cannot succeed inside an image build, and
+## neither of the two things it does is wanted here. It moves
+## /var/lib/rpm/.rpm.lock aside to run a nested "rpm --import" for MEGA's key -
+## ostree bases keep the rpm database in /usr/share/rpm and have no /var/lib/rpm
+## at all, so the lock is not where it looks and the import fails. It then calls
+## sysctl to raise fs.inotify.max_user_watches, which is denied in an
+## unprivileged build.
 ##
 ## rpm still installs the package when %post fails, but dnf reports the whole
 ## transaction as failed and exits non-zero, which would abort the build. So
 ## tolerate a non-zero exit and assert afterwards that the package really landed
 ## - a genuine download or dependency failure still stops the build. The same
 ## shape works for any vendor RPM with a scriptlet that misbehaves in a container.
+##
+## Both packages also drop in a dnf repository, megasync.repo, for their own
+## auto-updates. An image updates when you rebuild it, so the file goes.
 
-# --- MEGAsync: uncomment every line down to the next ruler
+# --- MEGAcmd: uncomment every line down to the next ruler
 # --------------------------------------------------------------------------
 ## /opt has to be a real directory before anything installs into it. The same
 ## four lines as section 2, and harmless if that block is enabled as well.
@@ -328,43 +332,60 @@ if [ -L /opt ]; then
     mkdir /opt
 fi
 
-dnf -y install https://mega.nz/linux/repo/Fedora_45/x86_64/megasync-Fedora_45.x86_64.rpm \
-    || echo "megasync: dnf exited non-zero (expected) - verifying"
-rpm -q megasync
+dnf -y install https://mega.nz/linux/repo/Fedora_45/x86_64/megacmd-Fedora_45.x86_64.rpm \
+    || echo "megacmd: dnf exited non-zero (expected) - verifying"
+rpm -q megacmd
 
-## As with 1Password: a dnf repository for auto-updates, of no use in an image.
 rm -f /etc/yum.repos.d/megasync.repo
-
-## MEGAsync writes its own ~/.config/autostart entry the first time it is run
-## and told to start on login. This one is here so that it does not have to be:
-## a fresh account gets the tray client running without anyone opening the
-## preferences window first. The same /etc/xdg/autostart reasoning as the
-## Tailscale block in section 8, including how to switch it off per account.
-install -d -m 0755 /etc/xdg/autostart
-cat > /etc/xdg/autostart/megasync.desktop <<'DESKTOP'
-[Desktop Entry]
-Type=Application
-Name=MEGAsync
-Icon=mega
-Exec=sh -c "sleep 5; exec megasync 2>/dev/null"
-Terminal=false
-X-GNOME-Autostart-enabled=true
-DESKTOP
-chmod 0644 /etc/xdg/autostart/megasync.desktop
 # --------------------------------------------------------------------------
 
-## The inotify limit belongs in a sysctl.d drop-in applied at boot instead, e.g.
-## build_files/sysfiles/usr/lib/sysctl.d/90-megasync-inotify.conf containing:
+## MEGAcmd ships the inotify limit its scriptlet tried to set as
+## /etc/sysctl.d/99-megacmd-inotify-limit.conf, which is applied at boot, so
+## nothing more is needed for it.
+##
+## Every mega-* command starts the background server, mega-cmd-server, when it
+## is not already running, and the server carries on any syncs set up with
+## "mega-sync". Run "mega-help" for the full list of commands.
+
+# --- MEGAsync: uncomment every line down to the next ruler
+# --------------------------------------------------------------------------
+# ## /opt has to be a real directory before anything installs into it. The same
+# ## four lines as section 2, and harmless if that block is enabled as well.
+# if [ -L /opt ]; then
+#     rm /opt
+#     mkdir /opt
+# fi
+#
+# dnf -y install https://mega.nz/linux/repo/Fedora_45/x86_64/megasync-Fedora_45.x86_64.rpm \
+#     || echo "megasync: dnf exited non-zero (expected) - verifying"
+# rpm -q megasync
+#
+# rm -f /etc/yum.repos.d/megasync.repo
+#
+# ## MEGAsync writes its own ~/.config/autostart entry the first time it is run
+# ## and told to start on login. This one is here so that it does not have to be:
+# ## a fresh account gets the tray client running without anyone opening the
+# ## preferences window first. The same /etc/xdg/autostart reasoning as the
+# ## Tailscale block in section 8, including how to switch it off per account.
+# install -d -m 0755 /etc/xdg/autostart
+# cat > /etc/xdg/autostart/megasync.desktop <<'DESKTOP'
+# [Desktop Entry]
+# Type=Application
+# Name=MEGAsync
+# Icon=mega
+# Exec=sh -c "sleep 5; exec megasync 2>/dev/null"
+# Terminal=false
+# X-GNOME-Autostart-enabled=true
+# DESKTOP
+# chmod 0644 /etc/xdg/autostart/megasync.desktop
+# --------------------------------------------------------------------------
+
+## For MEGAsync the inotify limit belongs in a sysctl.d drop-in applied at boot
+## instead, e.g. build_files/sysfiles/usr/lib/sysctl.d/90-megasync-inotify.conf
+## containing:
 ##
 ##   fs.inotify.max_user_watches = 524288
-
-## The command line client is published the same way, if you prefer it:
-
-# --- MEGAcmd, the command line client, instead of or as well as the above
-# --------------------------------------------------------------------------
-# dnf -y install https://mega.nz/linux/repo/Fedora_45/x86_64/megacmd-Fedora_45.x86_64.rpm
-# --------------------------------------------------------------------------
-
+##
 ## Note that MEGAsync is a Qt5 application. On a GNOME or COSMIC image the Qt5
 ## libraries are not installed, so expect dnf to pull in a sizeable dependency
 ## tree along with it.
@@ -579,7 +600,7 @@ dnf -y copr disable atim/lazygit
 ## dnf -y install https://example.com/downloads/some-package.x86_64.rpm
 
 ## Sections 2a and 2b are complete, ready-to-uncomment examples of this
-## (1Password and MEGAsync).
+## (1Password and MEGAcmd or MEGAsync).
 ##
 ## Both of those import the vendor's key first, so rpm checks the signature
 ## before installing. Not every project signs its packages, and dnf says so
