@@ -337,28 +337,6 @@ dnf -y install https://mega.nz/linux/repo/Fedora_45/x86_64/megacmd-Fedora_45.x86
 rpm -q megacmd
 
 rm -f /etc/yum.repos.d/megasync.repo
-
-## MEGAcmd runs its syncs and backups in an engine, mega-cmd-server, that
-## otherwise starts only when a mega-* command first needs it. This user unit
-## runs it from login for every account, so syncs and backups carry on without
-## a terminal or the MEGA applet open. "systemctl --user disable
-## mega-cmd-server.service" turns it off for one account.
-cat > /usr/lib/systemd/user/mega-cmd-server.service <<'UNIT'
-[Unit]
-Description=MEGAcmd sync and backup engine
-Wants=network-online.target
-After=network-online.target
-
-[Service]
-ExecStart=/usr/bin/mega-cmd-server
-Restart=on-failure
-RestartSec=10
-
-[Install]
-WantedBy=default.target
-UNIT
-chmod 0644 /usr/lib/systemd/user/mega-cmd-server.service
-systemctl --global enable mega-cmd-server.service
 # --------------------------------------------------------------------------
 
 ## MEGAcmd ships the inotify limit its scriptlet tried to set as
@@ -699,33 +677,45 @@ rm -rf "${TUATARA_TMP}"
 # --- The MEGA applet for the COSMIC panel, from its newest GitHub release
 # --------------------------------------------------------------------------
 ## Shows MEGAcmd's sync folders, backups, storage and transfers in the panel,
-## so it needs section 2b's MEGAcmd block, and python3 and gum from
-## rpm_packages. Add it in Settings -> Desktop -> Panel -> Applets.
+## so it needs section 2b's MEGAcmd block. Add it in Settings -> Desktop ->
+## Panel -> Applets.
 ##
 ## Its releases are not pre-releases, so GitHub's ".../releases/latest/download/"
-## shortcut finds the newest, unlike Tuatara's. The archive's name carries the
-## version, so it is read from the release's SHA256SUMS, which also gives the
-## hash checked before unpacking - as with Tuatara, that guards against a
+## shortcut finds the newest, unlike Tuatara's. The packages' names carry the
+## version, so they are read from the release's SHA256SUMS, which also gives the
+## hashes checked before installing - as with Tuatara, that guards against a
 ## damaged download and vouches for nothing more than HTTPS does.
 ##
-## The archive is a usr/ tree: the applet in /usr/bin, its shared core in
-## /usr/share/megacmd-applet, a desktop file and icons. It is not an RPM, so it
-## runs no scriptlets and rpm does not know about it; the next image build
-## replaces it.
+## Two packages: megacmd-applet, the shared core with the guided dialogs (it
+## pulls in gum) and a user unit for MEGAcmd's engine, and megacmd-applet-cosmic,
+## the applet itself. Both are built for this image's Fedora release.
 MEGA_APPLET_RELEASE="https://github.com/YardQuit/megacmd-applet/releases/latest/download"
 MEGA_APPLET_TMP="$(mktemp -d)"
 curl -fsSL --retry 3 --retry-all-errors --connect-timeout 15 \
     -o "${MEGA_APPLET_TMP}/SHA256SUMS" "${MEGA_APPLET_RELEASE}/SHA256SUMS"
-MEGA_APPLET_TAR="$(awk -v name="^megacmd-applet-cosmic-.*-$(uname -m)[.]tar[.]gz$" \
-    '$2 ~ name {print $2; exit}' "${MEGA_APPLET_TMP}/SHA256SUMS")"
-[ -n "${MEGA_APPLET_TAR}" ] || { echo "MEGA applet: no $(uname -m) archive in the newest release" >&2; exit 1; }
-
-curl -fL --retry 3 --retry-all-errors --connect-timeout 15 \
-    -o "${MEGA_APPLET_TMP}/${MEGA_APPLET_TAR}" "${MEGA_APPLET_RELEASE}/${MEGA_APPLET_TAR}"
-(cd "${MEGA_APPLET_TMP}" && grep -F "  ${MEGA_APPLET_TAR}" SHA256SUMS | sha256sum -c -)
-tar -xzf "${MEGA_APPLET_TMP}/${MEGA_APPLET_TAR}" -C /usr --strip-components=1 --no-same-owner usr
-test -x /usr/bin/cosmic-applet-megacmd
+MEGA_APPLET_RPMS=()
+for MEGA_APPLET_NAME in megacmd-applet megacmd-applet-cosmic; do
+    MEGA_APPLET_RPM="$(awk -v name="^${MEGA_APPLET_NAME}-[0-9][^-]*-[^-]+[.]fc$(rpm -E %fedora)[.]$(uname -m)[.]rpm$" \
+        '$2 ~ name {print $2; exit}' "${MEGA_APPLET_TMP}/SHA256SUMS")"
+    [ -n "${MEGA_APPLET_RPM}" ] || {
+        echo "MEGA applet: no ${MEGA_APPLET_NAME} RPM for fc$(rpm -E %fedora) $(uname -m) in the newest release" >&2
+        exit 1
+    }
+    curl -fL --retry 3 --retry-all-errors --connect-timeout 15 \
+        -o "${MEGA_APPLET_TMP}/${MEGA_APPLET_RPM}" "${MEGA_APPLET_RELEASE}/${MEGA_APPLET_RPM}"
+    (cd "${MEGA_APPLET_TMP}" && grep -F "  ${MEGA_APPLET_RPM}" SHA256SUMS | sha256sum -c -)
+    MEGA_APPLET_RPMS+=("${MEGA_APPLET_TMP}/${MEGA_APPLET_RPM}")
+done
+dnf -y install "${MEGA_APPLET_RPMS[@]}"
 rm -rf "${MEGA_APPLET_TMP}"
+
+## MEGAcmd runs its syncs and backups in an engine, mega-cmd-server, that
+## otherwise starts only when a mega-* command first needs it. The core
+## package's user unit runs it from login; enabled for every account here, so
+## syncs and backups carry on without a terminal or the applet open.
+## "systemctl --user disable mega-cmd-server.service" turns it off for one
+## account.
+systemctl --global enable mega-cmd-server.service
 # --------------------------------------------------------------------------
 
 
