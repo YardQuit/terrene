@@ -168,7 +168,7 @@ write_history 3
 jq '.aaaa.running = null' "${HISTORY}" > "${WORK}/t" && cp "${WORK}/t" "${HISTORY}"
 expect_untouched "nothing is marked" false
 
-rm -rf "${WORK}/home"
+rm -rf "${WORK:?}/home"
 if run_script false && [ ! -e "${HISTORY}" ]; then
     ok "Pika Backup is not installed"
 else
