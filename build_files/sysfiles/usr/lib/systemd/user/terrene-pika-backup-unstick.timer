@@ -1,0 +1,9 @@
+[Unit]
+Description=Check every few minutes for Pika Backup backups left marked as running
+
+[Timer]
+OnStartupSec=2min
+OnUnitActiveSec=10min
+
+[Install]
+WantedBy=timers.target

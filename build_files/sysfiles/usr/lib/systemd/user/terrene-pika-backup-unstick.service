@@ -1,0 +1,7 @@
+[Unit]
+Description=Let Pika Backup's schedule run again after an interrupted backup
+Documentation=file:///usr/libexec/terrene-pika-backup-unstick
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/terrene-pika-backup-unstick
