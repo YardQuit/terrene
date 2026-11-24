@@ -13,6 +13,10 @@ Set up for the Framework Laptop 13 by default: a YubiKey touch, a fingerprint or
 
 COSMIC keeps one display layout per set of connected screens, in `~/.local/state/cosmic-comp/outputs.ron`, and the login screen uses the same layouts. New accounts start with the Samsung LC49G95T at its native 5120×1440 at 120 Hz, both on its own with the lid closed and beside the laptop screen with the lid open (`/etc/skel/.local/state/cosmic-comp/outputs.ron`). If it still comes up at a lower resolution, set its native mode in Settings → Displays with the lid as it was when the problem showed: the Samsung on its own is a layout of its own, so fixing it with the lid open leaves the lid-closed layout - and the login screen - as they were. Don't edit `outputs.ron` by hand while COSMIC is running - it is written back at logout.
 
+## Backups
+
+Pika Backup's schedule stops for good when a backup is cut off: a crash, a power cut or a logout while it waits for a password leaves the backup marked as running, and only opening Pika's window clears the mark. A user timer, `terrene-pika-backup-unstick.timer`, checks every ten minutes and, while Pika is not running, records such a backup as aborted the way Pika does itself, so the schedule carries on. It does nothing for an account without Pika Backup. To switch it off for one account, run `systemctl --user disable terrene-pika-backup-unstick.timer`.
+
 ## Install
 
 ### bootc switch

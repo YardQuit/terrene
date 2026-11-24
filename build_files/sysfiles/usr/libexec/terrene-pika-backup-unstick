@@ -1,0 +1,67 @@
+#!/bin/bash
+# terrene-pika-backup-unstick: clear the marks Pika Backup leaves behind when
+# it stops in the middle of a backup, so that its schedule runs again.
+#
+# Pika Backup marks a backup as running in its history file while it works,
+# and its scheduler skips any backup that carries the mark. When the app stops
+# before it can clear the mark - a crash, a power cut, a logout while it waits
+# at a password prompt - only the app itself removes it, the next time its
+# window is opened. Until then no scheduled backup runs at all. A mark left
+# while archives were open for browsing blocks the schedule the same way.
+#
+# While Pika Backup's app is not running, a mark can only be a leftover. This
+# rewrites the history the way the app does when it starts: the run is
+# recorded as aborted ("The program or system seems to have crashed"), the
+# marks are removed, and the scheduler takes over again on its next probe.
+#
+# Run every few minutes by terrene-pika-backup-unstick.timer. It does nothing
+# when Pika Backup is not installed, when nothing is marked, or when the app is
+# running or that cannot be told.
+
+set -euo pipefail
+
+APP_ID="org.gnome.World.PikaBackup"
+HISTORY="${HOME}/.var/app/${APP_ID}/config/pika-backup/history.json"
+
+# The number of runs Pika Backup keeps per backup.
+HISTORY_LENGTH=10
+
+# app_stopped: succeed only when the app is known not to run. Its window and
+# its backups live in one process, which holds the app's name on the session
+# bus. When the bus cannot be asked, the answer is "running".
+app_stopped() {
+    local reply
+    reply="$(busctl --user call org.freedesktop.DBus /org/freedesktop/DBus \
+        org.freedesktop.DBus NameHasOwner s "${APP_ID}" 2>/dev/null)" || return 1
+    [ "${reply}" = "b false" ]
+}
+
+[ -f "${HISTORY}" ] || exit 0
+app_stopped || exit 0
+
+marked="$(jq '[.[] | select(.running != null or .browsing != null)] | length' "${HISTORY}")"
+[ "${marked}" -gt 0 ] || exit 0
+
+tmp="$(mktemp "${HISTORY}.XXXXXX")"
+trap 'rm -f "${tmp}"' EXIT
+
+jq --argjson keep "${HISTORY_LENGTH}" '
+    map_values(
+        if .running != null then
+            .run = ([{end: .running.start,
+                      outcome: {Aborted: "LeftRunning"},
+                      messages: [], include: [], exclude: []}]
+                    + (.run // []))[:$keep]
+            | .running = null
+        else . end
+        | .browsing = null
+    )' "${HISTORY}" > "${tmp}"
+chmod --reference="${HISTORY}" "${tmp}"
+
+# The app may have started while the new file was written; it then owns the
+# history again and must not have it replaced underneath it.
+app_stopped || exit 0
+mv -f "${tmp}" "${HISTORY}"
+trap - EXIT
+
+echo "Cleared the leftover marks of ${marked} Pika Backup backup(s); the schedule runs them again."

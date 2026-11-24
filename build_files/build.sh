@@ -1200,6 +1200,19 @@ chmod 0644 /etc/xdg/autostart/trayscale.desktop
 ## reason tuned and firewalld are above.
 systemctl --global enable systemd-tmpfiles-setup.service
 
+## Pika Backup. Its scheduler skips a backup that is marked as running, and
+## when the app stops in the middle of one - a crash, a power cut, a logout
+## while it waits at a password prompt - only the app clears the mark, the next
+## time its window is opened. Until then no scheduled backup runs, for as long
+## as nobody opens it. The timer shipped at
+## build_files/sysfiles/usr/lib/systemd/user/terrene-pika-backup-unstick.timer
+## clears such a leftover mark while the app is not running, the way the app
+## does at startup, and the schedule picks the backup up again. It does nothing
+## for an account without Pika Backup. jq does the rewriting; check it is there
+## rather than ship a timer that fails every ten minutes.
+test -x /usr/bin/jq
+systemctl --global enable terrene-pika-backup-unstick.timer
+
 ## Framework Laptop 13. The rest of what the laptop needs is in place already:
 ## the fingerprint reader above, the lid switch in
 ## build_files/sysfiles/usr/lib/systemd/logind.conf.d/10-lid-docked.conf, and
